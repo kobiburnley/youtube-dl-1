@@ -714,6 +714,22 @@ class YoutubeIE(YoutubeBaseInfoExtractor):
             'url': 'https://www.youtube.com/watch?v=Ms7iBXnlUO8',
             'only_matching': True,
         },
+        {
+            # Video with yt:stretch=17:0
+            'url': 'https://www.youtube.com/watch?v=Q39EVAstoRM',
+            'info_dict': {
+                'id': 'Q39EVAstoRM',
+                'ext': 'mp4',
+                'title': 'Clash Of Clans#14 Dicas De Ataque Para CV 4',
+                'description': 'md5:ee18a25c350637c8faff806845bddee9',
+                'upload_date': '20151107',
+                'uploader_id': 'UCCr7TALkRbo3EtFzETQF1LA',
+                'uploader': 'CH GAMER DROID',
+            },
+            'params': {
+                'skip_download': True,
+            },
+        },
     ]
 
     def __init__(self, *args, **kwargs):
@@ -1459,6 +1475,11 @@ class YoutubeIE(YoutubeBaseInfoExtractor):
             manifest_url = video_info['hlsvp'][0]
             url_map = self._extract_from_m3u8(manifest_url, video_id)
             formats = _map_to_format_list(url_map)
+            # Accept-Encoding header causes failures in live streams on Youtube and Youtube Gaming
+            for a_format in formats:
+                if 'http_headers' not in a_format:
+                    a_format['http_headers'] = {}
+                a_format['http_headers']['Youtubedl-no-compression'] = True
         else:
             raise ExtractorError('no conn, hlsvp or url_encoded_fmt_stream_map information found in video info')
 
@@ -1496,10 +1517,15 @@ class YoutubeIE(YoutubeBaseInfoExtractor):
             r'<meta\s+property="og:video:tag".*?content="yt:stretch=(?P<w>[0-9]+):(?P<h>[0-9]+)">',
             video_webpage)
         if stretched_m:
-            ratio = float(stretched_m.group('w')) / float(stretched_m.group('h'))
-            for f in formats:
-                if f.get('vcodec') != 'none':
-                    f['stretched_ratio'] = ratio
+            w = float(stretched_m.group('w'))
+            h = float(stretched_m.group('h'))
+            # yt:stretch may hold invalid ratio data (e.g. for Q39EVAstoRM ratio is 17:0).
+            # We will only process correct ratios.
+            if w > 0 and h > 0:
+                ratio = w / h
+                for f in formats:
+                    if f.get('vcodec') != 'none':
+                        f['stretched_ratio'] = ratio
 
         self._sort_formats(formats)
 
