@@ -8,7 +8,8 @@ Then in your browser go to http://localhost:5000/?id=koeW4g8Y-lg&formats=251,171
 
 # BUILD STREAM REQUEST
 To the formats http get parameter pass your desired formats (detailed below) descending order
- 
+Exmaple: http://localhost:5000/?id=koeW4g8Y-lg&formats=22,18
+
 Known formats (number in the begining of each row:
 
     249 - audio only (DASH audio), webm, 50
