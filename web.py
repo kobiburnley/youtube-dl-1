@@ -29,10 +29,10 @@ def youtube_dl_extract_info(video_id):
 
 
 def youtube_dl_extract(video_id, formats_ids):
-    formats_ids_arr = formats_ids.split(',')
+    formats_ids_arr = formats_ids.split(',') if formats_ids else None
     info = youtube_dl_extract_info(video_id)
-    print "\n".join(["%s, %s, %s" % (i['format'].encode("utf-8"), i['ext'],  i['abr'] if 'abr' in i else '') for i in info['formats']])
-    return next((y['url'] for x in formats_ids_arr for y in info['formats'] if x in y['format'])) or info['formats'][0]['url']
+    #print "\n".join(["%s, %s, %s" % (i['format'].encode("utf-8"), i['ext'],  i['abr'] if 'abr' in i else '') for i in info['formats']])
+    return next((y['url'] for x in formats_ids_arr for y in info['formats'] if x in y['format'])) if formats_ids else info['formats'][0]['url']
 
 
 
