@@ -70,9 +70,13 @@ def hello_world_app(environ, start_response):
     # get media by type & quality
     # type = params.get('type', [False])[0]
     # quality = params.get('quality', [False])[0]
-
-    media_url = youtube_dl_extract(video_id, formats)
-    return stream_media(media_url, start_response)
+    try:
+        media_url = youtube_dl_extract(video_id, formats)
+        return stream_media(media_url, start_response)
+    except:
+        headers = [('Content-type', 'text/html')]
+        start_response('200 OK', headers)
+        return ['An error occurred.']
 
 httpd = make_server('', int(port), hello_world_app)
 print "Serving HTTP on port " + port + "..."
