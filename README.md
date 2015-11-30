@@ -1,3 +1,14 @@
+# DEPLOY TO HEROKU
+You can fort this repository and create a new app in the Heroku dashboard. In the deploy tab choose Github deploy and the branch to deploy from (heroku branch).
+
+OR
+
+    git clone
+    cd /
+    heroku login
+    heroku create *chooose-app-name*
+    git push heroku master
+
 youtube-dl - download videos from youtube.com or other video platforms
 
 - [INSTALLATION](#installation)
@@ -12,7 +23,8 @@ youtube-dl - download videos from youtube.com or other video platforms
 - [EMBEDDING YOUTUBE-DL](#embedding-youtube-dl)
 - [BUGS](#bugs)
 - [COPYRIGHT](#copyright)
-
+    
+    
 # INSTALLATION
 
 To install it right away for all UNIX users (Linux, OS X, etc.), type:
