@@ -62,6 +62,11 @@ def hello_world_app(environ, start_response):
     video_id = params.get('id', [False])[0]
     formats = params.get('formats', [False])[0]
 
+    if(not video_id):
+        headers = [('Content-type', 'text/html')]
+        start_response('200 OK', headers)
+        return ['youtube-dl heroku <a href="https://github.com/kobiburnley/youtube-dl/blob/heroku/README.md">read me</a>']
+
     # get media by type & quality
     # type = params.get('type', [False])[0]
     # quality = params.get('quality', [False])[0]
