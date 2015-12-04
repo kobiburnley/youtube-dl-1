@@ -3,9 +3,15 @@ from __future__ import unicode_literals
 from .abc import ABCIE
 from .abc7news import Abc7NewsIE
 from .academicearth import AcademicEarthCourseIE
+from .acast import (
+    ACastIE,
+    ACastChannelIE,
+)
 from .addanime import AddAnimeIE
 from .adobetv import (
     AdobeTVIE,
+    AdobeTVShowIE,
+    AdobeTVChannelIE,
     AdobeTVVideoIE,
 )
 from .adultswim import AdultSwimIE
@@ -38,6 +44,7 @@ from .arte import (
 )
 from .atresplayer import AtresPlayerIE
 from .atttechchannel import ATTTechChannelIE
+from .audimedia import AudiMediaIE
 from .audiomack import AudiomackIE, AudiomackAlbumIE
 from .azubu import AzubuIE
 from .baidu import BaiduVideoIE
@@ -200,6 +207,7 @@ from .freesound import FreesoundIE
 from .freespeech import FreespeechIE
 from .freevideo import FreeVideoIE
 from .funnyordie import FunnyOrDieIE
+from .gameinformer import GameInformerIE
 from .gamekings import GamekingsIE
 from .gameone import (
     GameOneIE,
@@ -554,6 +562,10 @@ from .shahid import ShahidIE
 from .shared import SharedIE
 from .sharesix import ShareSixIE
 from .sina import SinaIE
+from .skynewsarabia import (
+    SkyNewsArabiaIE,
+    SkyNewsArabiaArticleIE,
+)
 from .slideshare import SlideshareIE
 from .slutload import SlutloadIE
 from .smotri import (
