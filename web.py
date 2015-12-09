@@ -15,12 +15,25 @@ formats_map = {
     }
 }
 
+def download():
+    ydl_opts = {
+    'format': 'bestaudio/best',
+    'postprocessors': [{
+        'key': 'FFmpegExtractAudio',
+        'preferredcodec': 'mp3',
+        'preferredquality': '192',
+    }],
+    'logger': MyLogger(),
+    'progress_hooks': [my_hook],
+    }
+    with youtube_dl.YoutubeDL(ydl_opts) as ydl:
+        ydl.download(['http://www.youtube.com/watch?v=BaW_jenozKc'])
+
 def youtube_dl_extract_info(video_id):
-    ydl = youtube_dl.YoutubeDL()
 
     full_video_url = "%s%s" % ("https://www.youtube.com/watch?v=", video_id)
 
-    with ydl:
+    with youtube_dl.YoutubeDL() as ydl:
         result = ydl.extract_info(
             full_video_url,
             download=False
@@ -62,6 +75,8 @@ def hello_world_app(environ, start_response):
     video_id = params.get('id', [False])[0]
     formats = params.get('formats', [False])[0]
 
+    info = params.get('info', [False])[0]
+
     if(not video_id):
         headers = [('Content-type', 'text/html')]
         start_response('200 OK', headers)
@@ -72,6 +87,10 @@ def hello_world_app(environ, start_response):
     # quality = params.get('quality', [False])[0]
     try:
         media_url = youtube_dl_extract(video_id, formats)
+        if(info):
+            headers = [('Content-type', 'text/html')]
+            start_response('200 OK', headers)
+            return [media_url.encode("utf-8")]
         return stream_media(media_url, start_response)
     except:
         headers = [('Content-type', 'text/html')]
