@@ -54,6 +54,7 @@ from .onionstudios import OnionStudiosIE
 from .snagfilms import SnagFilmsEmbedIE
 from .screenwavemedia import ScreenwaveMediaIE
 from .mtv import MTVServicesEmbeddedIE
+from .pladform import PladformIE
 
 
 class GenericIE(InfoExtractor):
@@ -339,7 +340,7 @@ class GenericIE(InfoExtractor):
                 'id': 'BwY2RxaTrTkslxOfcan0UCf0YqyvWysJ',
                 'ext': 'mp4',
                 'title': '2cc213299525360.mov',  # that's what we get
-                'duration': 238231,
+                'duration': 238.231,
             },
             'add_ie': ['Ooyala'],
         },
@@ -351,7 +352,7 @@ class GenericIE(InfoExtractor):
                 'ext': 'mp4',
                 'title': '"Steve Jobs: Man in the Machine" trailer',
                 'description': 'The first trailer for the Alex Gibney documentary "Steve Jobs: Man in the Machine."',
-                'duration': 135427,
+                'duration': 135.427,
             },
             'params': {
                 'skip_download': True,
@@ -964,7 +965,7 @@ class GenericIE(InfoExtractor):
                 'ext': 'mp4',
                 'description': 'VIDEO: INDEX/MATCH versus VLOOKUP.',
                 'title': 'This is what separates the Excel masters from the wannabes',
-                'duration': 191933,
+                'duration': 191.933,
             },
             'params': {
                 # m3u8 downloads
@@ -1741,10 +1742,9 @@ class GenericIE(InfoExtractor):
             return self.url_result('eagleplatform:%(host)s:%(id)s' % mobj.groupdict(), 'EaglePlatform')
 
         # Look for Pladform embeds
-        mobj = re.search(
-            r'<iframe[^>]+src="(?P<url>https?://out\.pladform\.ru/player\?.+?)"', webpage)
-        if mobj is not None:
-            return self.url_result(mobj.group('url'), 'Pladform')
+        pladform_url = PladformIE._extract_url(webpage)
+        if pladform_url:
+            return self.url_result(pladform_url)
 
         # Look for Playwire embeds
         mobj = re.search(
