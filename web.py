@@ -3,6 +3,7 @@ import os
 import urlparse
 import youtube_dl
 import urllib2
+import json
 
 formats_map = {
     'audio': {
@@ -86,12 +87,15 @@ def hello_world_app(environ, start_response):
     # type = params.get('type', [False])[0]
     # quality = params.get('quality', [False])[0]
     try:
-        media_url = youtube_dl_extract(video_id, formats)
         if(info):
+            result = youtube_dl_extract_info(video_id)
             headers = [('Content-type', 'text/html')]
             start_response('200 OK', headers)
-            return [media_url.encode("utf-8")]
-        return stream_media(media_url, start_response)
+            audio = [(x['format'], x['ext'], x['abr']) for x in result['formats'] if 'audio' in x['format']]
+            return [json.dumps(audio)]
+        else:
+            media_url = youtube_dl_extract(video_id, formats)
+            return stream_media(media_url, start_response)
     except:
         headers = [('Content-type', 'text/html')]
         start_response('200 OK', headers)
