@@ -5,6 +5,8 @@ import youtube_dl
 import urllib2
 import json
 
+from youtube_service import youtube_search
+
 formats_map = {
     'audio': {
         'high': 251,
@@ -77,8 +79,9 @@ def hello_world_app(environ, start_response):
     formats = params.get('formats', [False])[0]
 
     info = params.get('info', [False])[0]
+    q = params.get('q', [False])[0]
 
-    if(not video_id):
+    if(not video_id and not q):
         headers = [('Content-type', 'text/html')]
         start_response('200 OK', headers)
         return ['youtube-dl heroku <a href="https://github.com/kobiburnley/youtube-dl/blob/heroku/README.md">read me</a>']
@@ -87,7 +90,10 @@ def hello_world_app(environ, start_response):
     # type = params.get('type', [False])[0]
     # quality = params.get('quality', [False])[0]
     try:
-        if(info):
+        if(q):
+            media_url = youtube_dl_extract(youtube_search(q, 1), formats)
+            return stream_media(media_url, start_response)
+        elif(info):
             result = youtube_dl_extract_info(video_id)
             headers = [('Content-type', 'text/html')]
             start_response('200 OK', headers)
