@@ -563,7 +563,7 @@ from .ro220 import Ro220IE
 from .rottentomatoes import RottenTomatoesIE
 from .roxwel import RoxwelIE
 from .rtbf import RTBFIE
-from .rte import RteIE
+from .rte import RteIE, RteRadioIE
 from .rtlnl import RtlNlIE
 from .rtl2 import RTL2IE
 from .rtp import RTPIE
@@ -746,6 +746,7 @@ from .tvp import TvpIE, TvpSeriesIE
 from .tvplay import TVPlayIE
 from .tweakers import TweakersIE
 from .twentyfourvideo import TwentyFourVideoIE
+from .twentymin import TwentyMinutenIE
 from .twentytwotracks import (
     TwentyTwoTracksIE,
     TwentyTwoTracksGenreIE
