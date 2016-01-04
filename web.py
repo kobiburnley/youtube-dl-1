@@ -97,7 +97,7 @@ def hello_world_app(environ, start_response):
             result = youtube_dl_extract_info(video_id)
             headers = [('Content-type', 'text/html')]
             start_response('200 OK', headers)
-            audio = [(x['format'], x['ext'], x['abr']) for x in result['formats'] if 'audio' in x['format']]
+            audio = [(x['format'], x['ext'], x['abr']) for x in result['formats']]
             return [json.dumps(audio)]
         else:
             media_url = youtube_dl_extract(video_id, formats)
