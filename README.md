@@ -400,7 +400,7 @@ which means you can modify it, redistribute it or use it however you like.
                                      downloading, similar to find's -exec
                                      syntax. Example: --exec 'adb push {}
                                      /sdcard/Music/ && rm {}'
-    --convert-subtitles FORMAT       Convert the subtitles to other format
+    --convert-subs FORMAT            Convert the subtitles to other format
                                      (currently supported: srt|ass|vtt)
 
 # CONFIGURATION
@@ -627,7 +627,7 @@ Either prepend `http://www.youtube.com/watch?v=` or separate the ID from the opt
 
 Use the `--cookies` option, for example `--cookies /path/to/cookies/file.txt`. Note that the cookies file must be in Mozilla/Netscape format and the first line of the cookies file must be either `# HTTP Cookie File` or `# Netscape HTTP Cookie File`. Make sure you have correct [newline format](https://en.wikipedia.org/wiki/Newline) in the cookies file and convert newlines if necessary to correspond with your OS, namely `CRLF` (`\r\n`) for Windows, `LF` (`\n`) for Linux and `CR` (`\r`) for Mac OS. `HTTP Error 400: Bad Request` when using `--cookies` is a good sign of invalid newline format.
 
-Passing cookies to youtube-dl is a good way to workaround login when a particular extractor does not implement it explicitly.
+Passing cookies to youtube-dl is a good way to workaround login when a particular extractor does not implement it explicitly. Another use case is working around [CAPTCHA](https://en.wikipedia.org/wiki/CAPTCHA) some websites require you to solve in particular cases in order to get access (e.g. YouTube, CloudFlare).
 
 ### Can you add support for this anime video site, or site which shows current movies for free?
 
@@ -830,7 +830,7 @@ So please elaborate on what feature you are requesting, or what bug you want to 
 - How it could be fixed
 - How your proposed solution would look like
 
-If your report is shorter than two lines, it is almost certainly missing some of these, which makes it hard for us to respond to it. We're often too polite to close the issue outright, but the missing info makes misinterpretation likely. As a commiter myself, I often get frustrated by these issues, since the only possible way for me to move forward on them is to ask for clarification over and over.
+If your report is shorter than two lines, it is almost certainly missing some of these, which makes it hard for us to respond to it. We're often too polite to close the issue outright, but the missing info makes misinterpretation likely. As a committer myself, I often get frustrated by these issues, since the only possible way for me to move forward on them is to ask for clarification over and over.
 
 For bug reports, this means that your report should contain the *complete* output of youtube-dl when called with the `-v` flag. The error message you get for (most) bugs even says so, but you would not believe how many of our bug reports do not contain this information.
 
