@@ -6,16 +6,14 @@ import hashlib
 import re
 
 from .common import InfoExtractor
-from ..compat import (
-    compat_str,
-    compat_urllib_parse,
-)
+from ..compat import compat_str
 from ..utils import (
-    int_or_none,
-    float_or_none,
-    sanitized_Request,
-    xpath_text,
     ExtractorError,
+    float_or_none,
+    int_or_none,
+    sanitized_Request,
+    urlencode_postdata,
+    xpath_text,
 )
 
 
@@ -86,7 +84,7 @@ class AtresPlayerIE(InfoExtractor):
         }
 
         request = sanitized_Request(
-            self._LOGIN_URL, compat_urllib_parse.urlencode(login_form).encode('utf-8'))
+            self._LOGIN_URL, urlencode_postdata(login_form))
         request.add_header('Content-Type', 'application/x-www-form-urlencoded')
         response = self._download_webpage(
             request, None, 'Logging in as %s' % username)
@@ -131,11 +129,6 @@ class AtresPlayerIE(InfoExtractor):
                     'tbr': int_or_none(mobj.group('bitrate')),
                 })
             formats.append(format_info)
-
-        m3u8_url = player.get('urlVideoHls')
-        if m3u8_url:
-            formats.extend(self._extract_m3u8_formats(
-                m3u8_url, episode_id, 'mp4', 'm3u8_native', m3u8_id='hls', fatal=False))
 
         timestamp = int_or_none(self._download_webpage(
             self._TIME_API_URL,

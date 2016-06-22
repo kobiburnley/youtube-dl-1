@@ -7,7 +7,7 @@ from ..utils import qualities
 
 
 class UnistraIE(InfoExtractor):
-    _VALID_URL = r'http://utv\.unistra\.fr/(?:index|video)\.php\?id_video\=(?P<id>\d+)'
+    _VALID_URL = r'https?://utv\.unistra\.fr/(?:index|video)\.php\?id_video\=(?P<id>\d+)'
 
     _TESTS = [
         {
@@ -38,7 +38,7 @@ class UnistraIE(InfoExtractor):
 
         webpage = self._download_webpage(url, video_id)
 
-        files = set(re.findall(r'file\s*:\s*"([^"]+)"', webpage))
+        files = set(re.findall(r'file\s*:\s*"(/[^"]+)"', webpage))
 
         quality = qualities(['SD', 'HD'])
         formats = []
