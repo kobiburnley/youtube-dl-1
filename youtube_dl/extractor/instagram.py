@@ -4,8 +4,10 @@ import re
 
 from .common import InfoExtractor
 from ..utils import (
+    get_element_by_attribute,
     int_or_none,
     limit_length,
+    lowercase_escape,
 )
 
 
@@ -22,9 +24,33 @@ class InstagramIE(InfoExtractor):
             'description': 'md5:1f17f0ab29bd6fe2bfad705f58de3cb8',
         }
     }, {
+        # missing description
+        'url': 'https://www.instagram.com/p/BA-pQFBG8HZ/?taken-by=britneyspears',
+        'info_dict': {
+            'id': 'BA-pQFBG8HZ',
+            'ext': 'mp4',
+            'uploader_id': 'britneyspears',
+            'title': 'Video by britneyspears',
+        },
+        'params': {
+            'skip_download': True,
+        },
+    }, {
         'url': 'https://instagram.com/p/-Cmh1cukG2/',
         'only_matching': True,
     }]
+
+    @staticmethod
+    def _extract_embed_url(webpage):
+        blockquote_el = get_element_by_attribute(
+            'class', 'instagram-media', webpage)
+        if blockquote_el is None:
+            return
+
+        mobj = re.search(
+            r'<a[^>]+href=([\'"])(?P<link>[^\'"]+)\1', blockquote_el)
+        if mobj:
+            return mobj.group('link')
 
     def _real_extract(self, url):
         video_id = self._match_id(url)
@@ -32,8 +58,10 @@ class InstagramIE(InfoExtractor):
         webpage = self._download_webpage(url, video_id)
         uploader_id = self._search_regex(r'"owner":{"username":"(.+?)"',
                                          webpage, 'uploader id', fatal=False)
-        desc = self._search_regex(r'"caption":"(.*?)"', webpage, 'description',
-                                  fatal=False)
+        desc = self._search_regex(
+            r'"caption":"(.+?)"', webpage, 'description', default=None)
+        if desc is not None:
+            desc = lowercase_escape(desc)
 
         return {
             'id': video_id,
@@ -124,7 +152,7 @@ class InstagramUserIE(InfoExtractor):
 
             if not page['items']:
                 break
-            max_id = page['items'][-1]['id']
+            max_id = page['items'][-1]['id'].split('_')[0]
             media_url = (
                 'http://instagram.com/%s/media?max_id=%s' % (
                     uploader_id, max_id))

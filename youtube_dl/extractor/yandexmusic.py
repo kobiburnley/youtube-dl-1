@@ -5,18 +5,30 @@ import re
 import hashlib
 
 from .common import InfoExtractor
-from ..compat import (
-    compat_str,
-    compat_urllib_parse,
-)
+from ..compat import compat_str
 from ..utils import (
+    ExtractorError,
     int_or_none,
     float_or_none,
     sanitized_Request,
+    urlencode_postdata,
 )
 
 
-class YandexMusicTrackIE(InfoExtractor):
+class YandexMusicBaseIE(InfoExtractor):
+    @staticmethod
+    def _handle_error(response):
+        error = response.get('error')
+        if error:
+            raise ExtractorError(error, expected=True)
+
+    def _download_json(self, *args, **kwargs):
+        response = super(YandexMusicBaseIE, self)._download_json(*args, **kwargs)
+        self._handle_error(response)
+        return response
+
+
+class YandexMusicTrackIE(YandexMusicBaseIE):
     IE_NAME = 'yandexmusic:track'
     IE_DESC = 'Яндекс.Музыка - Трек'
     _VALID_URL = r'https?://music\.yandex\.(?:ru|kz|ua|by)/album/(?P<album_id>\d+)/track/(?P<id>\d+)'
@@ -73,7 +85,7 @@ class YandexMusicTrackIE(InfoExtractor):
         return self._get_track_info(track)
 
 
-class YandexMusicPlaylistBaseIE(InfoExtractor):
+class YandexMusicPlaylistBaseIE(YandexMusicBaseIE):
     def _build_playlist(self, tracks):
         return [
             self.url_result(
@@ -156,14 +168,14 @@ class YandexMusicPlaylistIE(YandexMusicPlaylistBaseIE):
             missing_track_ids = set(map(compat_str, track_ids)) - set(present_track_ids)
             request = sanitized_Request(
                 'https://music.yandex.ru/handlers/track-entries.jsx',
-                compat_urllib_parse.urlencode({
+                urlencode_postdata({
                     'entries': ','.join(missing_track_ids),
                     'lang': mu.get('settings', {}).get('lang', 'en'),
                     'external-domain': 'music.yandex.ru',
                     'overembed': 'false',
                     'sign': mu.get('authData', {}).get('user', {}).get('sign'),
                     'strict': 'true',
-                }).encode('utf-8'))
+                }))
             request.add_header('Referer', url)
             request.add_header('X-Requested-With', 'XMLHttpRequest')
 
