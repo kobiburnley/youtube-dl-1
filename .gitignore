@@ -13,6 +13,7 @@ README.txt
 youtube-dl.1
 youtube-dl.bash-completion
 youtube-dl.fish
+youtube_dl/extractor/lazy_extractors.py
 youtube-dl
 youtube-dl.exe
 youtube-dl.tar.gz
@@ -27,10 +28,16 @@ updates_key.pem
 *.mp4
 *.m4a
 *.m4v
+*.mp3
 *.part
 *.swp
 test/testdata
+test/local_parameters.json
 .tox
 youtube-dl.zsh
+
+# IntelliJ related files
 .idea
-.idea/*
+*.iml
+
+tmp/
