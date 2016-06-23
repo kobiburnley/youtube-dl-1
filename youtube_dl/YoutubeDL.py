@@ -2080,15 +2080,7 @@ class YoutubeDL(object):
             raise
 
     def get_ext(self, url):
-        ies = self._ies
-        for ie in ies:
-            if not ie.suitable(url):
-                continue
-
-            if not ie.working():
-                self.report_warning('The program functionality for this site has been marked as broken, '
-                                    'and will probably not work.')
-            return ie
+        return  self.get_info_extractor("Youtube")
 
     def get_encoding(self):
         encoding = self.params.get('encoding')

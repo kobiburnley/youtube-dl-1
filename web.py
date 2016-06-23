@@ -103,7 +103,7 @@ def hello_world_app(environ, start_response):
         headers = [('Content-type', 'text/html')]
         start_response('200 OK', headers)
         # wo = youtube_dl.YoutubeDL().get_info_extractor('YoutubeIE')._decrypt_signature(sig, video_id, url);
-        x = youtube_dl.YoutubeDL().get_ext(video_id);
+        x = youtube_dl.YoutubeDL().get_ext(video_id)
         wo = x._decrypt_signature(sig, video_id, url)
         return [wo.encode("utf-8")]
     elif video_id:
