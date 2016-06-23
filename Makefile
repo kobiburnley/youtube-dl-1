@@ -1,7 +1,7 @@
 all: youtube-dl README.md CONTRIBUTING.md README.txt youtube-dl.1 youtube-dl.bash-completion youtube-dl.zsh youtube-dl.fish supportedsites
 
 clean:
-	rm -rf youtube-dl.1.temp.md youtube-dl.1 youtube-dl.bash-completion README.txt MANIFEST build/ dist/ .coverage cover/ youtube-dl.tar.gz youtube-dl.zsh youtube-dl.fish *.dump *.part *.info.json *.mp4 *.flv *.mp3 *.avi CONTRIBUTING.md.tmp ISSUE_TEMPLATE.md.tmp youtube-dl youtube-dl.exe
+	rm -rf youtube-dl.1.temp.md youtube-dl.1 youtube-dl.bash-completion README.txt MANIFEST build/ dist/ .coverage cover/ youtube-dl.tar.gz youtube-dl.zsh youtube-dl.fish youtube_dl/extractor/lazy_extractors.py *.dump *.part *.info.json *.mp4 *.m4a *.flv *.mp3 *.avi *.mkv *.webm *.jpg *.png CONTRIBUTING.md.tmp ISSUE_TEMPLATE.md.tmp youtube-dl youtube-dl.exe
 	find . -name "*.pyc" -delete
 	find . -name "*.class" -delete
 
@@ -37,7 +37,7 @@ test:
 ot: offlinetest
 
 offlinetest: codetest
-	$(PYTHON) -m nose --verbose test --exclude test_download.py --exclude test_age_restriction.py --exclude test_subtitles.py --exclude test_write_annotations.py --exclude test_youtube_lists.py --exclude test_iqiyi_sdk_interpreter.py
+	$(PYTHON) -m nose --verbose test --exclude test_download.py --exclude test_age_restriction.py --exclude test_subtitles.py --exclude test_write_annotations.py --exclude test_youtube_lists.py --exclude test_iqiyi_sdk_interpreter.py --exclude test_socks.py
 
 tar: youtube-dl.tar.gz
 
@@ -69,7 +69,7 @@ README.txt: README.md
 	pandoc -f markdown -t plain README.md -o README.txt
 
 youtube-dl.1: README.md
-	$(PYTHON) devscripts/prepare_manpage.py >youtube-dl.1.temp.md
+	$(PYTHON) devscripts/prepare_manpage.py youtube-dl.1.temp.md
 	pandoc -s -f markdown -t man youtube-dl.1.temp.md -o youtube-dl.1
 	rm -f youtube-dl.1.temp.md
 
@@ -87,6 +87,12 @@ youtube-dl.fish: youtube_dl/*.py youtube_dl/*/*.py devscripts/fish-completion.in
 	$(PYTHON) devscripts/fish-completion.py
 
 fish-completion: youtube-dl.fish
+
+lazy-extractors: youtube_dl/extractor/lazy_extractors.py
+
+_EXTRACTOR_FILES != find youtube_dl/extractor -iname '*.py' -and -not -iname 'lazy_extractors.py'
+youtube_dl/extractor/lazy_extractors.py: devscripts/make_lazy_extractors.py devscripts/lazy_load_template.py $(_EXTRACTOR_FILES)
+	$(PYTHON) devscripts/make_lazy_extractors.py $@
 
 youtube-dl.tar.gz: youtube-dl README.md README.txt youtube-dl.1 youtube-dl.bash-completion youtube-dl.zsh youtube-dl.fish
 	@tar -czf youtube-dl.tar.gz --transform "s|^|youtube-dl/|" --owner 0 --group 0 \
