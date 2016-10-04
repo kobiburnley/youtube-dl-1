@@ -94,13 +94,13 @@ class LyndaBaseIE(InfoExtractor):
 class LyndaIE(LyndaBaseIE):
     IE_NAME = 'lynda'
     IE_DESC = 'lynda.com videos'
-    _VALID_URL = r'https?://www\.lynda\.com/(?:[^/]+/[^/]+/\d+|player/embed)/(?P<id>\d+)'
+    _VALID_URL = r'https?://(?:www\.)?lynda\.com/(?:[^/]+/[^/]+/\d+|player/embed)/(?P<id>\d+)'
 
     _TIMECODE_REGEX = r'\[(?P<timecode>\d+:\d+:\d+[\.,]\d+)\]'
 
     _TESTS = [{
         'url': 'http://www.lynda.com/Bootstrap-tutorials/Using-exercise-files/110885/114408-4.html',
-        'md5': 'ecfc6862da89489161fb9cd5f5a6fac1',
+        # md5 is unstable
         'info_dict': {
             'id': '114408',
             'ext': 'mp4',

@@ -1,4 +1,4 @@
-# encoding: utf-8
+# coding: utf-8
 from __future__ import unicode_literals
 
 import json
@@ -16,6 +16,7 @@ from ..utils import (
     ExtractorError,
     InAdvancePagedList,
     int_or_none,
+    NO_DEFAULT,
     RegexNotFoundError,
     sanitized_Request,
     smuggle_url,
@@ -55,6 +56,26 @@ class VimeoBaseInfoExtractor(InfoExtractor):
         login_request.add_header('Referer', self._LOGIN_URL)
         self._set_vimeo_cookie('vuid', vuid)
         self._download_webpage(login_request, None, False, 'Wrong login info')
+
+    def _verify_video_password(self, url, video_id, webpage):
+        password = self._downloader.params.get('videopassword')
+        if password is None:
+            raise ExtractorError('This video is protected by a password, use the --video-password option', expected=True)
+        token, vuid = self._extract_xsrft_and_vuid(webpage)
+        data = urlencode_postdata({
+            'password': password,
+            'token': token,
+        })
+        if url.startswith('http://'):
+            # vimeo only supports https now, but the user can give an http url
+            url = url.replace('http://', 'https://')
+        password_request = sanitized_Request(url + '/password', data)
+        password_request.add_header('Content-Type', 'application/x-www-form-urlencoded')
+        password_request.add_header('Referer', url)
+        self._set_vimeo_cookie('vuid', vuid)
+        return self._download_webpage(
+            password_request, video_id,
+            'Verifying the password', 'Wrong password')
 
     def _extract_xsrft_and_vuid(self, webpage):
         xsrft = self._search_regex(
@@ -330,39 +351,27 @@ class VimeoIE(VimeoBaseInfoExtractor):
     ]
 
     @staticmethod
+    def _smuggle_referrer(url, referrer_url):
+        return smuggle_url(url, {'http_headers': {'Referer': referrer_url}})
+
+    @staticmethod
     def _extract_vimeo_url(url, webpage):
         # Look for embedded (iframe) Vimeo player
         mobj = re.search(
             r'<iframe[^>]+?src=(["\'])(?P<url>(?:https?:)?//player\.vimeo\.com/video/.+?)\1', webpage)
         if mobj:
             player_url = unescapeHTML(mobj.group('url'))
-            surl = smuggle_url(player_url, {'http_headers': {'Referer': url}})
-            return surl
+            return VimeoIE._smuggle_referrer(player_url, url)
         # Look for embedded (swf embed) Vimeo player
         mobj = re.search(
             r'<embed[^>]+?src="((?:https?:)?//(?:www\.)?vimeo\.com/moogaloop\.swf.+?)"', webpage)
         if mobj:
             return mobj.group(1)
-
-    def _verify_video_password(self, url, video_id, webpage):
-        password = self._downloader.params.get('videopassword')
-        if password is None:
-            raise ExtractorError('This video is protected by a password, use the --video-password option', expected=True)
-        token, vuid = self._extract_xsrft_and_vuid(webpage)
-        data = urlencode_postdata({
-            'password': password,
-            'token': token,
-        })
-        if url.startswith('http://'):
-            # vimeo only supports https now, but the user can give an http url
-            url = url.replace('http://', 'https://')
-        password_request = sanitized_Request(url + '/password', data)
-        password_request.add_header('Content-Type', 'application/x-www-form-urlencoded')
-        password_request.add_header('Referer', url)
-        self._set_vimeo_cookie('vuid', vuid)
-        return self._download_webpage(
-            password_request, video_id,
-            'Verifying the password', 'Wrong password')
+        # Look more for non-standard embedded Vimeo player
+        mobj = re.search(
+            r'<video[^>]+src=(?P<q1>[\'"])(?P<url>(?:https?:)?//(?:www\.)?vimeo\.com/[0-9]+)(?P=q1)', webpage)
+        if mobj:
+            return mobj.group('url')
 
     def _verify_player_video_password(self, url, video_id):
         password = self._downloader.params.get('videopassword')
@@ -580,6 +589,20 @@ class VimeoOndemandIE(VimeoBaseInfoExtractor):
             'uploader_id': 'gumfilms',
         },
     }, {
+        # requires Referer to be passed along with og:video:url
+        'url': 'https://vimeo.com/ondemand/36938/126682985',
+        'info_dict': {
+            'id': '126682985',
+            'ext': 'mp4',
+            'title': 'Rävlock, rätt läte på rätt plats',
+            'uploader': 'Lindroth & Norin',
+            'uploader_url': 're:https?://(?:www\.)?vimeo\.com/user14430847',
+            'uploader_id': 'user14430847',
+        },
+        'params': {
+            'skip_download': True,
+        },
+    }, {
         'url': 'https://vimeo.com/ondemand/nazmaalik',
         'only_matching': True,
     }, {
@@ -593,7 +616,12 @@ class VimeoOndemandIE(VimeoBaseInfoExtractor):
     def _real_extract(self, url):
         video_id = self._match_id(url)
         webpage = self._download_webpage(url, video_id)
-        return self.url_result(self._og_search_video_url(webpage), VimeoIE.ie_key())
+        return self.url_result(
+            # Some videos require Referer to be passed along with og:video:url
+            # similarly to generic vimeo embeds (e.g.
+            # https://vimeo.com/ondemand/36938/126682985).
+            VimeoIE._smuggle_referrer(self._og_search_video_url(webpage), url),
+            VimeoIE.ie_key())
 
 
 class VimeoChannelIE(VimeoBaseInfoExtractor):
@@ -791,12 +819,39 @@ class VimeoReviewIE(VimeoBaseInfoExtractor):
             'thumbnail': 're:^https?://.*\.jpg$',
             'uploader_id': 'user22258446',
         }
+    }, {
+        'note': 'Password protected',
+        'url': 'https://vimeo.com/user37284429/review/138823582/c4d865efde',
+        'info_dict': {
+            'id': '138823582',
+            'ext': 'mp4',
+            'title': 'EFFICIENT PICKUP MASTERCLASS MODULE 1',
+            'uploader': 'TMB',
+            'uploader_id': 'user37284429',
+        },
+        'params': {
+            'videopassword': 'holygrail',
+        },
     }]
+
+    def _real_initialize(self):
+        self._login()
+
+    def _get_config_url(self, webpage_url, video_id, video_password_verified=False):
+        webpage = self._download_webpage(webpage_url, video_id)
+        config_url = self._html_search_regex(
+            r'data-config-url="([^"]+)"', webpage, 'config URL',
+            default=NO_DEFAULT if video_password_verified else None)
+        if config_url is None:
+            self._verify_video_password(webpage_url, video_id, webpage)
+            config_url = self._get_config_url(
+                webpage_url, video_id, video_password_verified=True)
+        return config_url
 
     def _real_extract(self, url):
         video_id = self._match_id(url)
-        config = self._download_json(
-            'https://player.vimeo.com/video/%s/config' % video_id, video_id)
+        config_url = self._get_config_url(url, video_id)
+        config = self._download_json(config_url, video_id)
         info_dict = self._parse_config(config, video_id)
         self._vimeo_sort_formats(info_dict['formats'])
         info_dict['id'] = video_id

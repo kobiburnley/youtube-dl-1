@@ -17,7 +17,7 @@ youtube-dl - download videos from youtube.com or other video platforms
 
 To install it right away for all UNIX users (Linux, OS X, etc.), type:
 
-    sudo curl -L https://yt-dl.org/latest/youtube-dl -o /usr/local/bin/youtube-dl
+    sudo curl -L https://yt-dl.org/downloads/latest/youtube-dl -o /usr/local/bin/youtube-dl
     sudo chmod a+rx /usr/local/bin/youtube-dl
 
 If you do not have curl, you can alternatively use a recent wget:
@@ -89,6 +89,8 @@ which means you can modify it, redistribute it or use it however you like.
     --mark-watched                   Mark videos watched (YouTube only)
     --no-mark-watched                Do not mark videos watched (YouTube only)
     --no-color                       Do not emit color codes in output
+    --abort-on-unavailable-fragment  Abort downloading when some fragment is not
+                                     available
 
 ## Network Options:
     --proxy URL                      Use the specified HTTP/HTTPS/SOCKS proxy.
@@ -103,9 +105,9 @@ which means you can modify it, redistribute it or use it however you like.
                                      (experimental)
     -6, --force-ipv6                 Make all connections via IPv6
                                      (experimental)
-    --cn-verification-proxy URL      Use this proxy to verify the IP address for
-                                     some Chinese sites. The default proxy
-                                     specified by --proxy (or none, if the
+    --geo-verification-proxy URL     Use this proxy to verify the IP address for
+                                     some geo-restricted sites. The default
+                                     proxy specified by --proxy (or none, if the
                                      options is not present) is used for the
                                      actual downloading. (experimental)
 
@@ -173,7 +175,10 @@ which means you can modify it, redistribute it or use it however you like.
     -R, --retries RETRIES            Number of retries (default is 10), or
                                      "infinite".
     --fragment-retries RETRIES       Number of retries for a fragment (default
-                                     is 10), or "infinite" (DASH only)
+                                     is 10), or "infinite" (DASH and hlsnative
+                                     only)
+    --skip-unavailable-fragments     Skip unavailable fragments (DASH and
+                                     hlsnative only)
     --buffer-size SIZE               Size of download buffer (e.g. 1024 or 16K)
                                      (default is 1024)
     --no-resize-buffer               Do not automatically adjust the buffer
@@ -201,32 +206,8 @@ which means you can modify it, redistribute it or use it however you like.
     -a, --batch-file FILE            File containing URLs to download ('-' for
                                      stdin)
     --id                             Use only video ID in file name
-    -o, --output TEMPLATE            Output filename template. Use %(title)s to
-                                     get the title, %(uploader)s for the
-                                     uploader name, %(uploader_id)s for the
-                                     uploader nickname if different,
-                                     %(autonumber)s to get an automatically
-                                     incremented number, %(ext)s for the
-                                     filename extension, %(format)s for the
-                                     format description (like "22 - 1280x720" or
-                                     "HD"), %(format_id)s for the unique id of
-                                     the format (like YouTube's itags: "137"),
-                                     %(upload_date)s for the upload date
-                                     (YYYYMMDD), %(extractor)s for the provider
-                                     (youtube, metacafe, etc), %(id)s for the
-                                     video id, %(playlist_title)s,
-                                     %(playlist_id)s, or %(playlist)s (=title if
-                                     present, ID otherwise) for the playlist the
-                                     video is in, %(playlist_index)s for the
-                                     position in the playlist. %(height)s and
-                                     %(width)s for the width and height of the
-                                     video format. %(resolution)s for a textual
-                                     description of the resolution of the video
-                                     format. %% for a literal percent. Use - to
-                                     output to stdout. Can also be used to
-                                     download to a different directory, for
-                                     example with -o '/my/downloads/%(uploader)s
-                                     /%(title)s-%(id)s.%(ext)s' .
+    -o, --output TEMPLATE            Output filename template, see the "OUTPUT
+                                     TEMPLATE" for all the info
     --autonumber-size NUMBER         Specify the number of digits in
                                      %(autonumber)s when it is present in output
                                      filename template or --auto-number option
@@ -330,7 +311,15 @@ which means you can modify it, redistribute it or use it however you like.
                                      bidirectional text support. Requires bidiv
                                      or fribidi executable in PATH
     --sleep-interval SECONDS         Number of seconds to sleep before each
-                                     download.
+                                     download when used alone or a lower bound
+                                     of a range for randomized sleep before each
+                                     download (minimum possible number of
+                                     seconds to sleep) when used along with
+                                     --max-sleep-interval.
+    --max-sleep-interval SECONDS     Upper bound of a range for randomized sleep
+                                     before each download (maximum possible
+                                     number of seconds to sleep). Must only be
+                                     used along with --min-sleep-interval.
 
 ## Video Format Options:
     -f, --format FORMAT              Video format code, see the "FORMAT
@@ -368,6 +357,17 @@ which means you can modify it, redistribute it or use it however you like.
     -2, --twofactor TWOFACTOR        Two-factor auth code
     -n, --netrc                      Use .netrc authentication data
     --video-password PASSWORD        Video password (vimeo, smotri, youku)
+
+## Adobe Pass Options:
+    --ap-mso MSO                     Adobe Pass multiple-system operator (TV
+                                     provider) identifier, use --ap-list-mso for
+                                     a list of available MSOs
+    --ap-username USERNAME           Multiple-system operator account login
+    --ap-password PASSWORD           Multiple-system operator account password.
+                                     If this option is left out, youtube-dl will
+                                     ask interactively.
+    --ap-list-mso                    List all supported multiple-system
+                                     operators
 
 ## Post-processing Options:
     -x, --extract-audio              Convert video files to audio-only files
@@ -419,18 +419,27 @@ which means you can modify it, redistribute it or use it however you like.
                                      downloading, similar to find's -exec
                                      syntax. Example: --exec 'adb push {}
                                      /sdcard/Music/ && rm {}'
-    --convert-subs FORMAT            Convert the subtitles to other format
+    --convert-subtitles FORMAT       Convert the subtitles to other format
                                      (currently supported: srt|ass|vtt)
 
 # CONFIGURATION
 
-You can configure youtube-dl by placing any supported command line option to a configuration file. On Linux and OS X, the system wide configuration file is located at `/etc/youtube-dl.conf` and the user wide configuration file at `~/.config/youtube-dl/config`. On Windows, the user wide configuration file locations are `%APPDATA%\youtube-dl\config.txt` or `C:\Users\<user name>\youtube-dl.conf`.
+You can configure youtube-dl by placing any supported command line option to a configuration file. On Linux and OS X, the system wide configuration file is located at `/etc/youtube-dl.conf` and the user wide configuration file at `~/.config/youtube-dl/config`. On Windows, the user wide configuration file locations are `%APPDATA%\youtube-dl\config.txt` or `C:\Users\<user name>\youtube-dl.conf`. Note that by default configuration file may not exist so you may need to create it yourself.
 
 For example, with the following configuration file youtube-dl will always extract the audio, not copy the mtime, use a proxy and save all videos under `Movies` directory in your home directory:
 ```
+# Lines starting with # are comments
+
+# Always extract audio
 -x
+
+# Do not copy the mtime
 --no-mtime
+
+# Use this proxy
 --proxy 127.0.0.1:3128
+
+# Save all videos under Movies directory in your home directory
 -o ~/Movies/%(title)s.%(ext)s
 ```
 
@@ -660,7 +669,11 @@ $ youtube-dl -f 'best[filesize<50M]'
 
 # Download best format available via direct link over HTTP/HTTPS protocol
 $ youtube-dl -f '(bestvideo+bestaudio/best)[protocol^=http]'
+
+# Download the best video format and the best audio format without merging them
+$ youtube-dl -f 'bestvideo,bestaudio' -o '%(title)s.f%(format_id)s.%(ext)s'
 ```
+Note that in the last example, an output template is recommended as bestvideo and bestaudio may have the same file name.
 
 
 # VIDEO SELECTION
@@ -741,7 +754,7 @@ Videos or video formats streamed via RTMP protocol can only be downloaded when [
 
 ### I have downloaded a video but how can I play it?
 
-Once the video is fully downloaded, use any video player, such as [mpv](https://mpv.io/), [vlc](http://www.videolan.org) or [mplayer](http://www.mplayerhq.hu/).
+Once the video is fully downloaded, use any video player, such as [mpv](https://mpv.io/), [vlc](http://www.videolan.org/) or [mplayer](http://www.mplayerhq.hu/).
 
 ### I extracted a video URL with `-g`, but it does not play on another machine / in my webbrowser.
 
@@ -823,9 +836,41 @@ Either prepend `http://www.youtube.com/watch?v=` or separate the ID from the opt
 
 ### How do I pass cookies to youtube-dl?
 
-Use the `--cookies` option, for example `--cookies /path/to/cookies/file.txt`. Note that the cookies file must be in Mozilla/Netscape format and the first line of the cookies file must be either `# HTTP Cookie File` or `# Netscape HTTP Cookie File`. Make sure you have correct [newline format](https://en.wikipedia.org/wiki/Newline) in the cookies file and convert newlines if necessary to correspond with your OS, namely `CRLF` (`\r\n`) for Windows, `LF` (`\n`) for Linux and `CR` (`\r`) for Mac OS. `HTTP Error 400: Bad Request` when using `--cookies` is a good sign of invalid newline format.
+Use the `--cookies` option, for example `--cookies /path/to/cookies/file.txt`.
+
+In order to extract cookies from browser use any conforming browser extension for exporting cookies. For example, [cookies.txt](https://chrome.google.com/webstore/detail/cookiestxt/njabckikapfpffapmjgojcnbfjonfjfg) (for Chrome) or [Export Cookies](https://addons.mozilla.org/en-US/firefox/addon/export-cookies/) (for Firefox).
+
+Note that the cookies file must be in Mozilla/Netscape format and the first line of the cookies file must be either `# HTTP Cookie File` or `# Netscape HTTP Cookie File`. Make sure you have correct [newline format](https://en.wikipedia.org/wiki/Newline) in the cookies file and convert newlines if necessary to correspond with your OS, namely `CRLF` (`\r\n`) for Windows, `LF` (`\n`) for Linux and `CR` (`\r`) for Mac OS. `HTTP Error 400: Bad Request` when using `--cookies` is a good sign of invalid newline format.
 
 Passing cookies to youtube-dl is a good way to workaround login when a particular extractor does not implement it explicitly. Another use case is working around [CAPTCHA](https://en.wikipedia.org/wiki/CAPTCHA) some websites require you to solve in particular cases in order to get access (e.g. YouTube, CloudFlare).
+
+### How do I stream directly to media player?
+
+You will first need to tell youtube-dl to stream media to stdout with `-o -`, and also tell your media player to read from stdin (it must be capable of this for streaming) and then pipe former to latter. For example, streaming to [vlc](http://www.videolan.org/) can be achieved with:
+
+    youtube-dl -o - "http://www.youtube.com/watch?v=BaW_jenozKcj" | vlc -
+
+### How do I download only new videos from a playlist?
+
+Use download-archive feature. With this feature you should initially download the complete playlist with `--download-archive /path/to/download/archive/file.txt` that will record identifiers of all the videos in a special file. Each subsequent run with the same `--download-archive` will download only new videos and skip all videos that have been downloaded before. Note that only successful downloads are recorded in the file.
+
+For example, at first,
+
+    youtube-dl --download-archive archive.txt "https://www.youtube.com/playlist?list=PLwiyx1dc3P2JR9N8gQaQN_BCvlSlap7re"
+
+will download the complete `PLwiyx1dc3P2JR9N8gQaQN_BCvlSlap7re` playlist and create a file `archive.txt`. Each subsequent run will only download new videos if any:
+
+    youtube-dl --download-archive archive.txt "https://www.youtube.com/playlist?list=PLwiyx1dc3P2JR9N8gQaQN_BCvlSlap7re"
+
+### Should I add `--hls-prefer-native` into my config?
+
+When youtube-dl detects an HLS video, it can download it either with the built-in downloader or ffmpeg. Since many HLS streams are slightly invalid and ffmpeg/youtube-dl each handle some invalid cases better than the other, there is an option to switch the downloader if needed.
+
+When youtube-dl knows that one particular downloader works better for a given website, that downloader will be picked. Otherwise, youtube-dl will pick the best downloader for general compatibility, which at the moment happens to be ffmpeg. This choice may change in future versions of youtube-dl, with improvements of the built-in downloader and/or ffmpeg.
+
+In particular, the generic extractor (used when your website is not in the [list of supported sites by youtube-dl](http://rg3.github.io/youtube-dl/supportedsites.html) cannot mandate one specific downloader.
+
+If you put either `--hls-prefer-native` or `--hls-prefer-ffmpeg` into your configuration, a different subset of videos will fail to download correctly. Instead, it is much better to [file an issue](https://yt-dl.org/bug) or a pull request which details why the native or the ffmpeg HLS downloader is a better choice for your use case.
 
 ### Can you add support for this anime video site, or site which shows current movies for free?
 
@@ -890,9 +935,17 @@ If you want to add support for a new site, first of all **make sure** this site 
 After you have ensured this site is distributing it's content legally, you can follow this quick list (assuming your service is called `yourextractor`):
 
 1. [Fork this repository](https://github.com/rg3/youtube-dl/fork)
-2. Check out the source code with `git clone git@github.com:YOUR_GITHUB_USERNAME/youtube-dl.git`
-3. Start a new git branch with `cd youtube-dl; git checkout -b yourextractor`
+2. Check out the source code with:
+
+        git clone git@github.com:YOUR_GITHUB_USERNAME/youtube-dl.git
+
+3. Start a new git branch with
+
+        cd youtube-dl
+        git checkout -b yourextractor
+
 4. Start with this simple template and save it to `youtube_dl/extractor/yourextractor.py`:
+
     ```python
     # coding: utf-8
     from __future__ import unicode_literals
@@ -936,18 +989,150 @@ After you have ensured this site is distributing it's content legally, you can f
 5. Add an import in [`youtube_dl/extractor/extractors.py`](https://github.com/rg3/youtube-dl/blob/master/youtube_dl/extractor/extractors.py).
 6. Run `python test/test_download.py TestDownload.test_YourExtractor`. This *should fail* at first, but you can continually re-run it until you're done. If you decide to add more than one test, then rename ``_TEST`` to ``_TESTS`` and make it into a list of dictionaries. The tests will then be named `TestDownload.test_YourExtractor`, `TestDownload.test_YourExtractor_1`, `TestDownload.test_YourExtractor_2`, etc.
 7. Have a look at [`youtube_dl/extractor/common.py`](https://github.com/rg3/youtube-dl/blob/master/youtube_dl/extractor/common.py) for possible helper methods and a [detailed description of what your extractor should and may return](https://github.com/rg3/youtube-dl/blob/master/youtube_dl/extractor/common.py#L74-L252). Add tests and code for as many as you want.
-8. Keep in mind that the only mandatory fields in info dict for successful extraction process are `id`, `title` and either `url` or `formats`, i.e. these are the critical data the extraction does not make any sense without. This means that [any field](https://github.com/rg3/youtube-dl/blob/master/youtube_dl/extractor/common.py#L148-L252) apart from aforementioned mandatory ones should be treated **as optional** and extraction should be **tolerate** to situations when sources for these fields can potentially be unavailable (even if they always available at the moment) and **future-proof** in order not to break the extraction of general purpose mandatory fields. For example, if you have some intermediate dict `meta` that is a source of metadata and it has a key `summary` that you want to extract and put into resulting info dict as `description`, you should be ready that this key may be missing from the `meta` dict, i.e. you should extract it as `meta.get('summary')` and not `meta['summary']`. Similarly, you should pass `fatal=False` when extracting data from a webpage with `_search_regex/_html_search_regex`.
-9. Check the code with [flake8](https://pypi.python.org/pypi/flake8). Also make sure your code works under all [Python](http://www.python.org/) versions claimed supported by youtube-dl, namely 2.6, 2.7, and 3.2+.
-10. When the tests pass, [add](http://git-scm.com/docs/git-add) the new files and [commit](http://git-scm.com/docs/git-commit) them and [push](http://git-scm.com/docs/git-push) the result, like this:
+8. Make sure your code follows [youtube-dl coding conventions](#youtube-dl-coding-conventions) and check the code with [flake8](https://pypi.python.org/pypi/flake8). Also make sure your code works under all [Python](http://www.python.org/) versions claimed supported by youtube-dl, namely 2.6, 2.7, and 3.2+.
+9. When the tests pass, [add](http://git-scm.com/docs/git-add) the new files and [commit](http://git-scm.com/docs/git-commit) them and [push](http://git-scm.com/docs/git-push) the result, like this:
 
         $ git add youtube_dl/extractor/extractors.py
         $ git add youtube_dl/extractor/yourextractor.py
         $ git commit -m '[yourextractor] Add new extractor'
         $ git push origin yourextractor
 
-11. Finally, [create a pull request](https://help.github.com/articles/creating-a-pull-request). We'll then review and merge it.
+10. Finally, [create a pull request](https://help.github.com/articles/creating-a-pull-request). We'll then review and merge it.
 
 In any case, thank you very much for your contributions!
+
+## youtube-dl coding conventions
+
+This section introduces a guide lines for writing idiomatic, robust and future-proof extractor code.
+
+Extractors are very fragile by nature since they depend on the layout of the source data provided by 3rd party media hoster out of your control and this layout tend to change. As an extractor implementer your task is not only to write code that will extract media links and metadata correctly but also to minimize code dependency on source's layout changes and even to make the code foresee potential future changes and be ready for that. This is important because it will allow extractor not to break on minor layout changes thus keeping old youtube-dl versions working. Even though this breakage issue is easily fixed by emitting a new version of youtube-dl with fix incorporated all the previous version become broken in all repositories and distros' packages that may not be so prompt in fetching the update from us. Needless to say some may never receive an update at all that is possible for non rolling release distros.
+
+### Mandatory and optional metafields
+
+For extraction to work youtube-dl relies on metadata your extractor extracts and provides to youtube-dl expressed by [information dictionary](https://github.com/rg3/youtube-dl/blob/master/youtube_dl/extractor/common.py#L75-L257) or simply *info dict*. Only the following meta fields in *info dict* are considered mandatory for successful extraction process by youtube-dl:
+
+ - `id` (media identifier)
+ - `title` (media title)
+ - `url` (media download URL) or `formats`
+
+In fact only the last option is technically mandatory (i.e. if you can't figure out the download location of the media the extraction does not make any sense). But by convention youtube-dl also treats `id` and `title` to be mandatory. Thus aforementioned metafields are the critical data the extraction does not make any sense without and if any of them fail to be extracted then extractor is considered completely broken.
+
+[Any field](https://github.com/rg3/youtube-dl/blob/master/youtube_dl/extractor/common.py#L149-L257) apart from the aforementioned ones are considered **optional**. That means that extraction should be **tolerate** to situations when sources for these fields can potentially be unavailable (even if they are always available at the moment) and **future-proof** in order not to break the extraction of general purpose mandatory fields.
+
+#### Example
+
+Say you have some source dictionary `meta` that you've fetched as JSON with HTTP request and it has a key `summary`:
+
+```python
+meta = self._download_json(url, video_id)
+```
+    
+Assume at this point `meta`'s layout is:
+
+```python
+{
+    ...
+    "summary": "some fancy summary text",
+    ...
+}
+```
+
+Assume you want to extract `summary` and put into resulting info dict as `description`. Since `description` is optional metafield you should be ready that this key may be missing from the `meta` dict, so that you should extract it like:
+
+```python
+description = meta.get('summary')  # correct
+```
+
+and not like:
+
+```python
+description = meta['summary']  # incorrect
+```
+
+The latter will break extraction process with `KeyError` if `summary` disappears from `meta` at some time later but with former approach extraction will just go ahead with `description` set to `None` that is perfectly fine (remember `None` is equivalent for absence of data). 
+
+Similarly, you should pass `fatal=False` when extracting optional data from a webpage with `_search_regex`, `_html_search_regex` or similar methods, for instance:
+
+```python
+description = self._search_regex(
+    r'<span[^>]+id="title"[^>]*>([^<]+)<',
+    webpage, 'description', fatal=False)
+```
+
+With `fatal` set to `False` if `_search_regex` fails to extract `description` it will emit a warning and continue extraction.
+
+You can also pass `default=<some fallback value>`, for example:
+
+```python
+description = self._search_regex(
+    r'<span[^>]+id="title"[^>]*>([^<]+)<',
+    webpage, 'description', default=None)
+```
+
+On failure this code will silently continue the extraction with `description` set to `None`. That is useful for metafields that are known to may or may not be present.
+ 
+### Provide fallbacks
+
+When extracting metadata try to provide several scenarios for that. For example if `title` is present in several places/sources try extracting from at least some of them. This would make it more future-proof in case some of the sources became unavailable.
+
+#### Example
+
+Say `meta` from previous example has a `title` and you are about to extract it. Since `title` is mandatory meta field you should end up with something like:
+
+```python
+title = meta['title']
+```
+
+If `title` disappeares from `meta` in future due to some changes on hoster's side the extraction would fail since `title` is mandatory. That's expected.
+
+Assume that you have some another source you can extract `title` from, for example `og:title` HTML meta of a `webpage`. In this case you can provide a fallback scenario:
+
+```python
+title = meta.get('title') or self._og_search_title(webpage)
+```
+
+This code will try to extract from `meta` first and if it fails it will try extracting `og:title` from a `webpage`.
+
+### Make regular expressions flexible
+
+When using regular expressions try to write them fuzzy and flexible.
+ 
+#### Example
+
+Say you need to extract `title` from the following HTML code:
+
+```html
+<span style="position: absolute; left: 910px; width: 90px; float: right; z-index: 9999;" class="title">some fancy title</span>
+```
+
+The code for that task should look similar to:
+
+```python
+title = self._search_regex(
+    r'<span[^>]+class="title"[^>]*>([^<]+)', webpage, 'title')
+```
+
+Or even better:
+
+```python
+title = self._search_regex(
+    r'<span[^>]+class=(["\'])title\1[^>]*>(?P<title>[^<]+)',
+    webpage, 'title', group='title')
+```
+
+Note how you tolerate potential changes in `style` attribute's value or switch from using double quotes to single for `class` attribute: 
+
+The code definitely should not look like:
+
+```python
+title = self._search_regex(
+    r'<span style="position: absolute; left: 910px; width: 90px; float: right; z-index: 9999;" class="title">(.*?)</span>',
+    webpage, 'title', group='title')
+```
+
+### Use safe conversion functions
+
+Wrap all extracted numeric data into safe functions from `utils`: `int_or_none`, `float_or_none`. Use them for string to number conversions as well.
 
 # EMBEDDING YOUTUBE-DL
 
@@ -1037,7 +1222,7 @@ So please elaborate on what feature you are requesting, or what bug you want to 
 - How it could be fixed
 - How your proposed solution would look like
 
-If your report is shorter than two lines, it is almost certainly missing some of these, which makes it hard for us to respond to it. We're often too polite to close the issue outright, but the missing info makes misinterpretation likely. As a committer myself, I often get frustrated by these issues, since the only possible way for me to move forward on them is to ask for clarification over and over.
+If your report is shorter than two lines, it is almost certainly missing some of these, which makes it hard for us to respond to it. We're often too polite to close the issue outright, but the missing info makes misinterpretation likely. As a commiter myself, I often get frustrated by these issues, since the only possible way for me to move forward on them is to ask for clarification over and over.
 
 For bug reports, this means that your report should contain the *complete* output of youtube-dl when called with the `-v` flag. The error message you get for (most) bugs even says so, but you would not believe how many of our bug reports do not contain this information.
 
@@ -1055,7 +1240,7 @@ Make sure that someone has not already opened the issue you're trying to open. S
 
 ###  Why are existing options not enough?
 
-Before requesting a new feature, please have a quick peek at [the list of supported options](https://github.com/rg3/youtube-dl/blob/master/README.md#synopsis). Many feature requests are for features that actually exist already! Please, absolutely do show off your work in the issue report and detail how the existing similar options do *not* solve your problem.
+Before requesting a new feature, please have a quick peek at [the list of supported options](https://github.com/rg3/youtube-dl/blob/master/README.md#options). Many feature requests are for features that actually exist already! Please, absolutely do show off your work in the issue report and detail how the existing similar options do *not* solve your problem.
 
 ###  Is there enough context in your bug report?
 
