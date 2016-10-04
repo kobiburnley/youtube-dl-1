@@ -7,31 +7,6 @@ import json
 
 from youtube_service import youtube_search
 
-formats_map = {
-    'audio': {
-        'high': 251,
-        'med': 171,
-        'low': 140
-    },
-    'video': {
-
-    }
-}
-
-def download():
-    ydl_opts = {
-    'format': 'bestaudio/best',
-    'postprocessors': [{
-        'key': 'FFmpegExtractAudio',
-        'preferredcodec': 'mp3',
-        'preferredquality': '192',
-    }],
-    'logger': MyLogger(),
-    'progress_hooks': [my_hook],
-    }
-    with youtube_dl.YoutubeDL(ydl_opts) as ydl:
-        ydl.download(['http://www.youtube.com/watch?v=BaW_jenozKc'])
-
 def youtube_dl_extract_info(video_id):
 
     full_video_url = "%s%s" % ("https://www.youtube.com/watch?v=", video_id)
@@ -47,10 +22,14 @@ def youtube_dl_extract_info(video_id):
 def youtube_dl_extract(video_id, formats_ids):
     formats_ids_arr = formats_ids.split(',') if formats_ids else None
     info = youtube_dl_extract_info(video_id)
-    #print "\n".join(["%s, %s, %s" % (i['format'].encode("utf-8"), i['ext'],  i['abr'] if 'abr' in i else '') for i in info['formats']])
-    selected_formats = (y['url'] for x in formats_ids_arr for y in info['formats'] if x == y['format_id']) if formats_ids else info['formats'][0]['url']
-    return next(selected_formats)
-
+    url = info['formats'][0]['url']
+    if formats_ids_arr:
+        gen = (y['url'] for x in formats_ids_arr for y in info['formats'] if x == y['format_id'])
+        try:
+            url = next(gen)
+        except StopIteration:
+            url = info['formats'][0]['url']
+    return url
 
 
 def stream_media(media_url, start_response):
