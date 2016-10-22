@@ -55,16 +55,12 @@ def stream_media(media_url, start_response):
 def hello_world_app(environ, start_response):
     params = urlparse.parse_qs(environ['QUERY_STRING'])
 
-    video_id = params.get('id', [False])[0]
-    formats = params.get('formats', [False])[0]
+    video_id = params.get('id', [False])[0] or params.get('yb', [False])[0]
 
-    info = params.get('info', [False])[0]
-    q = params.get('q', [False])[0]
+    sig = params.get('sig', [False])[0]
+    url = params.get('url', [False])[0]
 
-    sig = d.get('sig', [False])[0]
-    url = d.get('url', [False])[0]
-
-    if(not video_id and not q and not sig and not url):
+    if not sig or not url:
         headers = [('Content-type', 'text/html')]
         start_response('200 OK', headers)
         return ['youtube-dl heroku <a href="https://github.com/kobiburnley/youtube-dl/blob/heroku/README.md">read me</a>']
@@ -77,63 +73,13 @@ def hello_world_app(environ, start_response):
             x = youtube_dl.YoutubeDL().get_ext(video_id)
             wo = x._decrypt_signature(sig, video_id, url)
             return [wo.encode("utf-8")]
-        elif(q):
-            media_url = youtube_dl_extract(youtube_search(q, 1), formats)
-            return stream_media(media_url, start_response)
-        elif(info):
-            result = youtube_dl_extract_info(video_id)
-            headers = [('Content-type', 'text/html')]
-            start_response('200 OK', headers)
-            audio = [(x['format'], x['ext']) for x in result['formats']]
-            return [json.dumps(audio)]
-        else:
-            media_url = youtube_dl_extract(video_id, formats)
-            print media_url
-            return stream_media(media_url, start_response)
     except:
         headers = [('Content-type', 'text/html')]
         start_response('200 OK', headers)
         return ['An error occurred.']
-    # print "2 way streaming..."
 
-
-
-def xxhello_world_app(environ, start_response):
-    d = urlparse.parse_qs(environ['QUERY_STRING'])
-    video_id = d.get('yb', [False])[0]
-
-    sig = d.get('sig', [False])[0]
-    url = d.get('url', [False])[0]
-
-
-    duration = d.get('duration', [False])[0]
-    if sig and url:
-        headers = [('Content-type', 'text/html')]
-        start_response('200 OK', headers)
-        # wo = youtube_dl.YoutubeDL().get_info_extractor('YoutubeIE')._decrypt_signature(sig, video_id, url);
-        x = youtube_dl.YoutubeDL().get_ext(video_id)
-        wo = x._decrypt_signature(sig, video_id, url)
-        return [wo.encode("utf-8")]
-    elif video_id:
-        # print "got video id", video_id
-        media_url = from_youtube(d.get('yb', [''])[0])
-        return stream(video_id, media_url, start_response)
-        # headers = [('Content-type', 'text/html')]
-        # start_response('200 OK', headers)
-        # return ["hello, world"]
-    elif duration:
-        headers = [('Content-type', 'text/html')]
-        start_response('200 OK', headers)
-        return [str(get_duration(duration))]
-    else:
-        headers = [('Content-type', 'text/html')]
-        start_response('200 OK', headers)
-        return ["hello, world"]
-
-        # return ["hello, world"]
 
 port = os.environ.get("PORT", "5000")
 httpd = make_server('', int(port), hello_world_app)
 print "Serving HTTP on port " + port + "..."
-
 httpd.serve_forever()
