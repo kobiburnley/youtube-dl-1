@@ -316,6 +316,7 @@ class YoutubeIE(YoutubeBaseInfoExtractor):
         '137': {'ext': 'mp4', 'height': 1080, 'format_note': 'DASH video', 'vcodec': 'h264', 'preference': -40},
         '138': {'ext': 'mp4', 'format_note': 'DASH video', 'vcodec': 'h264', 'preference': -40},  # Height can vary (https://github.com/rg3/youtube-dl/issues/4559)
         '160': {'ext': 'mp4', 'height': 144, 'format_note': 'DASH video', 'vcodec': 'h264', 'preference': -40},
+        '212': {'ext': 'mp4', 'height': 480, 'format_note': 'DASH video', 'vcodec': 'h264', 'preference': -40},
         '264': {'ext': 'mp4', 'height': 1440, 'format_note': 'DASH video', 'vcodec': 'h264', 'preference': -40},
         '298': {'ext': 'mp4', 'height': 720, 'format_note': 'DASH video', 'vcodec': 'h264', 'fps': 60, 'preference': -40},
         '299': {'ext': 'mp4', 'height': 1080, 'format_note': 'DASH video', 'vcodec': 'h264', 'fps': 60, 'preference': -40},
@@ -376,7 +377,7 @@ class YoutubeIE(YoutubeBaseInfoExtractor):
                 'title': 'youtube-dl test video "\'/\\ä↭𝕐',
                 'uploader': 'Philipp Hagemeister',
                 'uploader_id': 'phihag',
-                'uploader_url': 're:https?://(?:www\.)?youtube\.com/user/phihag',
+                'uploader_url': r're:https?://(?:www\.)?youtube\.com/user/phihag',
                 'upload_date': '20121002',
                 'license': 'Standard YouTube License',
                 'description': 'test chars:  "\'/\\ä↭𝕐\ntest URL: https://github.com/rg3/youtube-dl/issues/1892\n\nThis is a test video for youtube-dl.\n\nFor more information, contact phihag@phihag.de .',
@@ -403,7 +404,7 @@ class YoutubeIE(YoutubeBaseInfoExtractor):
                          'iconic ep', 'iconic', 'love', 'it'],
                 'uploader': 'Icona Pop',
                 'uploader_id': 'IconaPop',
-                'uploader_url': 're:https?://(?:www\.)?youtube\.com/user/IconaPop',
+                'uploader_url': r're:https?://(?:www\.)?youtube\.com/user/IconaPop',
                 'license': 'Standard YouTube License',
                 'creator': 'Icona Pop',
             }
@@ -420,7 +421,7 @@ class YoutubeIE(YoutubeBaseInfoExtractor):
                 'description': 'md5:64249768eec3bc4276236606ea996373',
                 'uploader': 'justintimberlakeVEVO',
                 'uploader_id': 'justintimberlakeVEVO',
-                'uploader_url': 're:https?://(?:www\.)?youtube\.com/user/justintimberlakeVEVO',
+                'uploader_url': r're:https?://(?:www\.)?youtube\.com/user/justintimberlakeVEVO',
                 'license': 'Standard YouTube License',
                 'creator': 'Justin Timberlake',
                 'age_limit': 18,
@@ -437,7 +438,7 @@ class YoutubeIE(YoutubeBaseInfoExtractor):
                 'description': 'md5:09b78bd971f1e3e289601dfba15ca4f7',
                 'uploader': 'SET India',
                 'uploader_id': 'setindia',
-                'uploader_url': 're:https?://(?:www\.)?youtube\.com/user/setindia',
+                'uploader_url': r're:https?://(?:www\.)?youtube\.com/user/setindia',
                 'license': 'Standard YouTube License',
                 'age_limit': 18,
             }
@@ -451,7 +452,7 @@ class YoutubeIE(YoutubeBaseInfoExtractor):
                 'title': 'youtube-dl test video "\'/\\ä↭𝕐',
                 'uploader': 'Philipp Hagemeister',
                 'uploader_id': 'phihag',
-                'uploader_url': 're:https?://(?:www\.)?youtube\.com/user/phihag',
+                'uploader_url': r're:https?://(?:www\.)?youtube\.com/user/phihag',
                 'upload_date': '20121002',
                 'license': 'Standard YouTube License',
                 'description': 'test chars:  "\'/\\ä↭𝕐\ntest URL: https://github.com/rg3/youtube-dl/issues/1892\n\nThis is a test video for youtube-dl.\n\nFor more information, contact phihag@phihag.de .',
@@ -472,7 +473,7 @@ class YoutubeIE(YoutubeBaseInfoExtractor):
                 'ext': 'm4a',
                 'upload_date': '20121002',
                 'uploader_id': '8KVIDEO',
-                'uploader_url': 're:https?://(?:www\.)?youtube\.com/user/8KVIDEO',
+                'uploader_url': r're:https?://(?:www\.)?youtube\.com/user/8KVIDEO',
                 'description': '',
                 'uploader': '8KVIDEO',
                 'license': 'Standard YouTube License',
@@ -531,7 +532,7 @@ class YoutubeIE(YoutubeBaseInfoExtractor):
                 'upload_date': '20100909',
                 'uploader': 'The Amazing Atheist',
                 'uploader_id': 'TheAmazingAtheist',
-                'uploader_url': 're:https?://(?:www\.)?youtube\.com/user/TheAmazingAtheist',
+                'uploader_url': r're:https?://(?:www\.)?youtube\.com/user/TheAmazingAtheist',
                 'license': 'Standard YouTube License',
                 'title': 'Burning Everyone\'s Koran',
                 'description': 'SUBSCRIBE: http://www.youtube.com/saturninefilms\n\nEven Obama has taken a stand against freedom on this issue: http://www.huffingtonpost.com/2010/09/09/obama-gma-interview-quran_n_710282.html',
@@ -544,10 +545,10 @@ class YoutubeIE(YoutubeBaseInfoExtractor):
                 'id': 'HtVdAasjOgU',
                 'ext': 'mp4',
                 'title': 'The Witcher 3: Wild Hunt - The Sword Of Destiny Trailer',
-                'description': 're:(?s).{100,}About the Game\n.*?The Witcher 3: Wild Hunt.{100,}',
+                'description': r're:(?s).{100,}About the Game\n.*?The Witcher 3: Wild Hunt.{100,}',
                 'uploader': 'The Witcher',
                 'uploader_id': 'WitcherGame',
-                'uploader_url': 're:https?://(?:www\.)?youtube\.com/user/WitcherGame',
+                'uploader_url': r're:https?://(?:www\.)?youtube\.com/user/WitcherGame',
                 'upload_date': '20140605',
                 'license': 'Standard YouTube License',
                 'age_limit': 18,
@@ -563,7 +564,7 @@ class YoutubeIE(YoutubeBaseInfoExtractor):
                 'description': 'md5:33765bb339e1b47e7e72b5490139bb41',
                 'uploader': 'LloydVEVO',
                 'uploader_id': 'LloydVEVO',
-                'uploader_url': 're:https?://(?:www\.)?youtube\.com/user/LloydVEVO',
+                'uploader_url': r're:https?://(?:www\.)?youtube\.com/user/LloydVEVO',
                 'upload_date': '20110629',
                 'license': 'Standard YouTube License',
                 'age_limit': 18,
@@ -577,7 +578,7 @@ class YoutubeIE(YoutubeBaseInfoExtractor):
                 'ext': 'mp4',
                 'upload_date': '20100430',
                 'uploader_id': 'deadmau5',
-                'uploader_url': 're:https?://(?:www\.)?youtube\.com/user/deadmau5',
+                'uploader_url': r're:https?://(?:www\.)?youtube\.com/user/deadmau5',
                 'creator': 'deadmau5',
                 'description': 'md5:12c56784b8032162bb936a5f76d55360',
                 'uploader': 'deadmau5',
@@ -597,7 +598,7 @@ class YoutubeIE(YoutubeBaseInfoExtractor):
                 'ext': 'mp4',
                 'upload_date': '20150827',
                 'uploader_id': 'olympic',
-                'uploader_url': 're:https?://(?:www\.)?youtube\.com/user/olympic',
+                'uploader_url': r're:https?://(?:www\.)?youtube\.com/user/olympic',
                 'license': 'Standard YouTube License',
                 'description': 'HO09  - Women -  GER-AUS - Hockey - 31 July 2012 - London 2012 Olympic Games',
                 'uploader': 'Olympic',
@@ -616,7 +617,7 @@ class YoutubeIE(YoutubeBaseInfoExtractor):
                 'stretched_ratio': 16 / 9.,
                 'upload_date': '20110310',
                 'uploader_id': 'AllenMeow',
-                'uploader_url': 're:https?://(?:www\.)?youtube\.com/user/AllenMeow',
+                'uploader_url': r're:https?://(?:www\.)?youtube\.com/user/AllenMeow',
                 'description': 'made by Wacom from Korea | 字幕&加油添醋 by TY\'s Allen | 感謝heylisa00cavey1001同學熱情提供梗及翻譯',
                 'uploader': '孫艾倫',
                 'license': 'Standard YouTube License',
@@ -650,7 +651,7 @@ class YoutubeIE(YoutubeBaseInfoExtractor):
                 'description': 'md5:116377fd2963b81ec4ce64b542173306',
                 'upload_date': '20150625',
                 'uploader_id': 'dorappi2000',
-                'uploader_url': 're:https?://(?:www\.)?youtube\.com/user/dorappi2000',
+                'uploader_url': r're:https?://(?:www\.)?youtube\.com/user/dorappi2000',
                 'uploader': 'dorappi2000',
                 'license': 'Standard YouTube License',
                 'formats': 'mincount:32',
@@ -693,7 +694,7 @@ class YoutubeIE(YoutubeBaseInfoExtractor):
                     'upload_date': '20150721',
                     'uploader': 'Beer Games Beer',
                     'uploader_id': 'beergamesbeer',
-                    'uploader_url': 're:https?://(?:www\.)?youtube\.com/user/beergamesbeer',
+                    'uploader_url': r're:https?://(?:www\.)?youtube\.com/user/beergamesbeer',
                     'license': 'Standard YouTube License',
                 },
             }, {
@@ -705,7 +706,7 @@ class YoutubeIE(YoutubeBaseInfoExtractor):
                     'upload_date': '20150721',
                     'uploader': 'Beer Games Beer',
                     'uploader_id': 'beergamesbeer',
-                    'uploader_url': 're:https?://(?:www\.)?youtube\.com/user/beergamesbeer',
+                    'uploader_url': r're:https?://(?:www\.)?youtube\.com/user/beergamesbeer',
                     'license': 'Standard YouTube License',
                 },
             }, {
@@ -717,7 +718,7 @@ class YoutubeIE(YoutubeBaseInfoExtractor):
                     'upload_date': '20150721',
                     'uploader': 'Beer Games Beer',
                     'uploader_id': 'beergamesbeer',
-                    'uploader_url': 're:https?://(?:www\.)?youtube\.com/user/beergamesbeer',
+                    'uploader_url': r're:https?://(?:www\.)?youtube\.com/user/beergamesbeer',
                     'license': 'Standard YouTube License',
                 },
             }, {
@@ -729,7 +730,7 @@ class YoutubeIE(YoutubeBaseInfoExtractor):
                     'upload_date': '20150721',
                     'uploader': 'Beer Games Beer',
                     'uploader_id': 'beergamesbeer',
-                    'uploader_url': 're:https?://(?:www\.)?youtube\.com/user/beergamesbeer',
+                    'uploader_url': r're:https?://(?:www\.)?youtube\.com/user/beergamesbeer',
                     'license': 'Standard YouTube License',
                 },
             }],
@@ -769,7 +770,7 @@ class YoutubeIE(YoutubeBaseInfoExtractor):
                 'description': 'md5:8085699c11dc3f597ce0410b0dcbb34a',
                 'upload_date': '20151119',
                 'uploader_id': 'IronSoulElf',
-                'uploader_url': 're:https?://(?:www\.)?youtube\.com/user/IronSoulElf',
+                'uploader_url': r're:https?://(?:www\.)?youtube\.com/user/IronSoulElf',
                 'uploader': 'IronSoulElf',
                 'license': 'Standard YouTube License',
                 'creator': 'Todd Haberman, Daniel Law Heath & Aaron Kaplan',
@@ -810,7 +811,7 @@ class YoutubeIE(YoutubeBaseInfoExtractor):
                 'description': 'md5:a677553cf0840649b731a3024aeff4cc',
                 'upload_date': '20150127',
                 'uploader_id': 'BerkmanCenter',
-                'uploader_url': 're:https?://(?:www\.)?youtube\.com/user/BerkmanCenter',
+                'uploader_url': r're:https?://(?:www\.)?youtube\.com/user/BerkmanCenter',
                 'uploader': 'BerkmanCenter',
                 'license': 'Creative Commons Attribution license (reuse allowed)',
             },
@@ -829,7 +830,7 @@ class YoutubeIE(YoutubeBaseInfoExtractor):
                 'upload_date': '20151119',
                 'uploader': 'Bernie 2016',
                 'uploader_id': 'UCH1dpzjCEiGAt8CXkryhkZg',
-                'uploader_url': 're:https?://(?:www\.)?youtube\.com/channel/UCH1dpzjCEiGAt8CXkryhkZg',
+                'uploader_url': r're:https?://(?:www\.)?youtube\.com/channel/UCH1dpzjCEiGAt8CXkryhkZg',
                 'license': 'Creative Commons Attribution license (reuse allowed)',
             },
             'params': {
@@ -856,12 +857,17 @@ class YoutubeIE(YoutubeBaseInfoExtractor):
                 'upload_date': '20150811',
                 'uploader': 'FlixMatrix',
                 'uploader_id': 'FlixMatrixKaravan',
-                'uploader_url': 're:https?://(?:www\.)?youtube\.com/user/FlixMatrixKaravan',
+                'uploader_url': r're:https?://(?:www\.)?youtube\.com/user/FlixMatrixKaravan',
                 'license': 'Standard YouTube License',
             },
             'params': {
                 'skip_download': True,
             },
+        },
+        {
+            # itag 212
+            'url': '1t24XAntNCY',
+            'only_matching': True,
         }
     ]
 
@@ -1796,7 +1802,7 @@ class YoutubePlaylistIE(YoutubePlaylistBaseInfoExtractor):
                      |
                         ((?:PL|LL|EC|UU|FL|RD|UL)[0-9A-Za-z-_]{10,})
                      )"""
-    _TEMPLATE_URL = 'https://www.youtube.com/playlist?list=%s'
+    _TEMPLATE_URL = 'https://www.youtube.com/playlist?list=%s&disable_polymer=true'
     _VIDEO_RE = r'href="\s*/watch\?v=(?P<id>[0-9A-Za-z_-]{11})&amp;[^"]*?index=(?P<index>\d+)(?:[^>]+>(?P<title>[^<]+))?'
     IE_NAME = 'youtube:playlist'
     _TESTS = [{
@@ -1867,7 +1873,7 @@ class YoutubePlaylistIE(YoutubePlaylistBaseInfoExtractor):
             'title': 'Uploads from Interstellar Movie',
             'id': 'UUXw-G3eDE9trcvY2sBMM_aA',
         },
-        'playlist_mincout': 21,
+        'playlist_mincount': 21,
     }, {
         # Playlist URL that does not actually serve a playlist
         'url': 'https://www.youtube.com/watch?v=FqZTN594JQw&list=PLMYEtVRpaqY00V9W81Cwmzp6N6vZqfUKD4',
@@ -1877,7 +1883,7 @@ class YoutubePlaylistIE(YoutubePlaylistBaseInfoExtractor):
             'title': "Smiley's People 01 detective, Adventure Series, Action",
             'uploader': 'STREEM',
             'uploader_id': 'UCyPhqAZgwYWZfxElWVbVJng',
-            'uploader_url': 're:https?://(?:www\.)?youtube\.com/channel/UCyPhqAZgwYWZfxElWVbVJng',
+            'uploader_url': r're:https?://(?:www\.)?youtube\.com/channel/UCyPhqAZgwYWZfxElWVbVJng',
             'upload_date': '20150526',
             'license': 'Standard YouTube License',
             'description': 'md5:507cdcb5a49ac0da37a920ece610be80',
@@ -1890,6 +1896,27 @@ class YoutubePlaylistIE(YoutubePlaylistBaseInfoExtractor):
             'skip_download': True,
         },
         'add_ie': [YoutubeIE.ie_key()],
+    }, {
+        'url': 'https://youtu.be/yeWKywCrFtk?list=PL2qgrgXsNUG5ig9cat4ohreBjYLAPC0J5',
+        'info_dict': {
+            'id': 'yeWKywCrFtk',
+            'ext': 'mp4',
+            'title': 'Small Scale Baler and Braiding Rugs',
+            'uploader': 'Backus-Page House Museum',
+            'uploader_id': 'backuspagemuseum',
+            'uploader_url': r're:https?://(?:www\.)?youtube\.com/user/backuspagemuseum',
+            'upload_date': '20161008',
+            'license': 'Standard YouTube License',
+            'description': 'md5:800c0c78d5eb128500bffd4f0b4f2e8a',
+            'categories': ['Nonprofits & Activism'],
+            'tags': list,
+            'like_count': int,
+            'dislike_count': int,
+        },
+        'params': {
+            'noplaylist': True,
+            'skip_download': True,
+        },
     }, {
         'url': 'https://youtu.be/uWyaPkt-VOI?list=PL9D9FC436B881BA21',
         'only_matching': True,
@@ -1971,8 +1998,10 @@ class YoutubePlaylistIE(YoutubePlaylistBaseInfoExtractor):
     def _check_download_just_video(self, url, playlist_id):
         # Check if it's a video-specific URL
         query_dict = compat_urlparse.parse_qs(compat_urlparse.urlparse(url).query)
-        if 'v' in query_dict:
-            video_id = query_dict['v'][0]
+        video_id = query_dict.get('v', [None])[0] or self._search_regex(
+            r'(?:^|//)youtu\.be/([0-9A-Za-z_-]{11})', url,
+            'video id', default=None)
+        if video_id:
             if self._downloader.params.get('noplaylist'):
                 self.to_screen('Downloading just video %s because of --no-playlist' % video_id)
                 return video_id, self.url_result(video_id, 'Youtube', video_id=video_id)
@@ -2152,7 +2181,7 @@ class YoutubeUserIE(YoutubeChannelIE):
 
 class YoutubeLiveIE(YoutubeBaseInfoExtractor):
     IE_DESC = 'YouTube.com live streams'
-    _VALID_URL = r'(?P<base_url>https?://(?:\w+\.)?youtube\.com/(?:user|channel|c)/(?P<id>[^/]+))/live'
+    _VALID_URL = r'(?P<base_url>https?://(?:\w+\.)?youtube\.com/(?:(?:user|channel|c)/)?(?P<id>[^/]+))/live'
     IE_NAME = 'youtube:live'
 
     _TESTS = [{
@@ -2163,7 +2192,7 @@ class YoutubeLiveIE(YoutubeBaseInfoExtractor):
             'title': 'The Young Turks - Live Main Show',
             'uploader': 'The Young Turks',
             'uploader_id': 'TheYoungTurks',
-            'uploader_url': 're:https?://(?:www\.)?youtube\.com/user/TheYoungTurks',
+            'uploader_url': r're:https?://(?:www\.)?youtube\.com/user/TheYoungTurks',
             'upload_date': '20150715',
             'license': 'Standard YouTube License',
             'description': 'md5:438179573adcdff3c97ebb1ee632b891',
@@ -2180,6 +2209,9 @@ class YoutubeLiveIE(YoutubeBaseInfoExtractor):
         'only_matching': True,
     }, {
         'url': 'https://www.youtube.com/c/CommanderVideoHq/live',
+        'only_matching': True,
+    }, {
+        'url': 'https://www.youtube.com/TheYoungTurks/live',
         'only_matching': True,
     }]
 

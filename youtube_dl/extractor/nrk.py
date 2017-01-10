@@ -1,6 +1,7 @@
 # coding: utf-8
 from __future__ import unicode_literals
 
+import random
 import re
 
 from .common import InfoExtractor
@@ -14,6 +15,25 @@ from ..utils import (
 
 
 class NRKBaseIE(InfoExtractor):
+    _faked_ip = None
+
+    def _download_webpage_handle(self, *args, **kwargs):
+        # NRK checks X-Forwarded-For HTTP header in order to figure out the
+        # origin of the client behind proxy. This allows to bypass geo
+        # restriction by faking this header's value to some Norway IP.
+        # We will do so once we encounter any geo restriction error.
+        if self._faked_ip:
+            # NB: str is intentional
+            kwargs.setdefault(str('headers'), {})['X-Forwarded-For'] = self._faked_ip
+        return super(NRKBaseIE, self)._download_webpage_handle(*args, **kwargs)
+
+    def _fake_ip(self):
+        # Use fake IP from 37.191.128.0/17 in order to workaround geo
+        # restriction
+        def octet(lb=0, ub=255):
+            return random.randint(lb, ub)
+        self._faked_ip = '37.191.%d.%d' % (octet(128), octet())
+
     def _real_extract(self, url):
         video_id = self._match_id(url)
 
@@ -24,7 +44,16 @@ class NRKBaseIE(InfoExtractor):
         title = data.get('fullTitle') or data.get('mainTitle') or data['title']
         video_id = data.get('id') or video_id
 
+        http_headers = {'X-Forwarded-For': self._faked_ip} if self._faked_ip else {}
+
         entries = []
+
+        conviva = data.get('convivaStatistics') or {}
+        live = (data.get('mediaElementType') == 'Live' or
+                data.get('isLive') is True or conviva.get('isLive'))
+
+        def make_title(t):
+            return self._live_title(t) if live else t
 
         media_assets = data.get('mediaAssets')
         if media_assets and isinstance(media_assets, list):
@@ -39,6 +68,13 @@ class NRKBaseIE(InfoExtractor):
                 if not formats:
                     continue
                 self._sort_formats(formats)
+
+                # Some f4m streams may not work with hdcore in fragments' URLs
+                for f in formats:
+                    extra_param = f.get('extra_param_to_segment_url')
+                    if extra_param and 'hdcore' in extra_param:
+                        del f['extra_param_to_segment_url']
+
                 entry_id, entry_title = video_id_and_title(num)
                 duration = parse_duration(asset.get('duration'))
                 subtitles = {}
@@ -50,10 +86,11 @@ class NRKBaseIE(InfoExtractor):
                         })
                 entries.append({
                     'id': asset.get('carrierId') or entry_id,
-                    'title': entry_title,
+                    'title': make_title(entry_title),
                     'duration': duration,
                     'subtitles': subtitles,
                     'formats': formats,
+                    'http_headers': http_headers,
                 })
 
         if not entries:
@@ -64,18 +101,30 @@ class NRKBaseIE(InfoExtractor):
                 duration = parse_duration(data.get('duration'))
                 entries = [{
                     'id': video_id,
-                    'title': title,
+                    'title': make_title(title),
                     'duration': duration,
                     'formats': formats,
                 }]
 
         if not entries:
-            if data.get('usageRights', {}).get('isGeoBlocked'):
-                raise ExtractorError(
-                    'NRK har ikke rettigheter til å vise dette programmet utenfor Norge',
-                    expected=True)
+            message_type = data.get('messageType', '')
+            # Can be ProgramIsGeoBlocked or ChannelIsGeoBlocked*
+            if 'IsGeoBlocked' in message_type and not self._faked_ip:
+                self.report_warning(
+                    'Video is geo restricted, trying to fake IP')
+                self._fake_ip()
+                return self._real_extract(url)
 
-        conviva = data.get('convivaStatistics') or {}
+            MESSAGES = {
+                'ProgramRightsAreNotReady': 'Du kan dessverre ikke se eller høre programmet',
+                'ProgramRightsHasExpired': 'Programmet har gått ut',
+                'ProgramIsGeoBlocked': 'NRK har ikke rettigheter til å vise dette programmet utenfor Norge',
+            }
+            raise ExtractorError(
+                '%s said: %s' % (self.IE_NAME, MESSAGES.get(
+                    message_type, message_type)),
+                expected=True)
+
         series = conviva.get('seriesName') or data.get('seriesTitle')
         episode = conviva.get('episodeName') or data.get('episodeNumberOrDate')
 
@@ -113,7 +162,17 @@ class NRKBaseIE(InfoExtractor):
 
 
 class NRKIE(NRKBaseIE):
-    _VALID_URL = r'(?:nrk:|https?://(?:www\.)?nrk\.no/video/PS\*)(?P<id>\d+)'
+    _VALID_URL = r'''(?x)
+                        (?:
+                            nrk:|
+                            https?://
+                                (?:
+                                    (?:www\.)?nrk\.no/video/PS\*|
+                                    v8-psapi\.nrk\.no/mediaelement/
+                                )
+                            )
+                            (?P<id>[^/?#&]+)
+                        '''
     _API_HOST = 'v8.psapi.nrk.no'
     _TESTS = [{
         # video
@@ -137,12 +196,26 @@ class NRKIE(NRKBaseIE):
             'description': 'md5:a621f5cc1bd75c8d5104cb048c6b8568',
             'duration': 20,
         }
+    }, {
+        'url': 'nrk:ecc1b952-96dc-4a98-81b9-5296dc7a98d9',
+        'only_matching': True,
+    }, {
+        'url': 'https://v8-psapi.nrk.no/mediaelement/ecc1b952-96dc-4a98-81b9-5296dc7a98d9',
+        'only_matching': True,
     }]
 
 
 class NRKTVIE(NRKBaseIE):
     IE_DESC = 'NRK TV and NRK Radio'
-    _VALID_URL = r'https?://(?:tv|radio)\.nrk(?:super)?\.no/(?:serie/[^/]+|program)/(?P<id>[a-zA-Z]{4}\d{8})(?:/\d{2}-\d{2}-\d{4})?(?:#del=(?P<part_id>\d+))?'
+    _EPISODE_RE = r'(?P<id>[a-zA-Z]{4}\d{8})'
+    _VALID_URL = r'''(?x)
+                        https?://
+                            (?:tv|radio)\.nrk(?:super)?\.no/
+                            (?:serie/[^/]+|program)/
+                            (?![Ee]pisodes)%s
+                            (?:/\d{2}-\d{2}-\d{4})?
+                            (?:\#del=(?P<part_id>\d+))?
+                    ''' % _EPISODE_RE
     _API_HOST = 'psapi-we.nrk.no'
 
     _TESTS = [{
@@ -208,9 +281,43 @@ class NRKTVIE(NRKBaseIE):
     }]
 
 
-class NRKPlaylistIE(InfoExtractor):
-    _VALID_URL = r'https?://(?:www\.)?nrk\.no/(?!video|skole)(?:[^/]+/)+(?P<id>[^/]+)'
+class NRKTVDirekteIE(NRKTVIE):
+    IE_DESC = 'NRK TV Direkte and NRK Radio Direkte'
+    _VALID_URL = r'https?://(?:tv|radio)\.nrk\.no/direkte/(?P<id>[^/?#&]+)'
 
+    _TESTS = [{
+        'url': 'https://tv.nrk.no/direkte/nrk1',
+        'only_matching': True,
+    }, {
+        'url': 'https://radio.nrk.no/direkte/p1_oslo_akershus',
+        'only_matching': True,
+    }]
+
+
+class NRKPlaylistBaseIE(InfoExtractor):
+    def _extract_description(self, webpage):
+        pass
+
+    def _real_extract(self, url):
+        playlist_id = self._match_id(url)
+
+        webpage = self._download_webpage(url, playlist_id)
+
+        entries = [
+            self.url_result('nrk:%s' % video_id, NRKIE.ie_key())
+            for video_id in re.findall(self._ITEM_RE, webpage)
+        ]
+
+        playlist_title = self. _extract_title(webpage)
+        playlist_description = self._extract_description(webpage)
+
+        return self.playlist_result(
+            entries, playlist_id, playlist_title, playlist_description)
+
+
+class NRKPlaylistIE(NRKPlaylistBaseIE):
+    _VALID_URL = r'https?://(?:www\.)?nrk\.no/(?!video|skole)(?:[^/]+/)+(?P<id>[^/]+)'
+    _ITEM_RE = r'class="[^"]*\brich\b[^"]*"[^>]+data-video-id="([^"]+)"'
     _TESTS = [{
         'url': 'http://www.nrk.no/troms/gjenopplev-den-historiske-solformorkelsen-1.12270763',
         'info_dict': {
@@ -229,23 +336,28 @@ class NRKPlaylistIE(InfoExtractor):
         'playlist_count': 5,
     }]
 
-    def _real_extract(self, url):
-        playlist_id = self._match_id(url)
+    def _extract_title(self, webpage):
+        return self._og_search_title(webpage, fatal=False)
 
-        webpage = self._download_webpage(url, playlist_id)
+    def _extract_description(self, webpage):
+        return self._og_search_description(webpage)
 
-        entries = [
-            self.url_result('nrk:%s' % video_id, 'NRK')
-            for video_id in re.findall(
-                r'class="[^"]*\brich\b[^"]*"[^>]+data-video-id="([^"]+)"',
-                webpage)
-        ]
 
-        playlist_title = self._og_search_title(webpage)
-        playlist_description = self._og_search_description(webpage)
+class NRKTVEpisodesIE(NRKPlaylistBaseIE):
+    _VALID_URL = r'https?://tv\.nrk\.no/program/[Ee]pisodes/[^/]+/(?P<id>\d+)'
+    _ITEM_RE = r'data-episode=["\']%s' % NRKTVIE._EPISODE_RE
+    _TESTS = [{
+        'url': 'https://tv.nrk.no/program/episodes/nytt-paa-nytt/69031',
+        'info_dict': {
+            'id': '69031',
+            'title': 'Nytt på nytt, sesong: 201210',
+        },
+        'playlist_count': 4,
+    }]
 
-        return self.playlist_result(
-            entries, playlist_id, playlist_title, playlist_description)
+    def _extract_title(self, webpage):
+        return self._html_search_regex(
+            r'<h1>([^<]+)</h1>', webpage, 'title', fatal=False)
 
 
 class NRKSkoleIE(InfoExtractor):

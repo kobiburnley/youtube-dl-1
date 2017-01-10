@@ -142,7 +142,7 @@ class CrunchyrollIE(CrunchyrollBaseIE):
             'ext': 'flv',
             'title': 'Culture Japan Episode 1 – Rebuilding Japan after the 3.11',
             'description': 'md5:2fbc01f90b87e8e9137296f37b461c12',
-            'thumbnail': 're:^https?://.*\.jpg$',
+            'thumbnail': r're:^https?://.*\.jpg$',
             'uploader': 'Danny Choo Network',
             'upload_date': '20120213',
         },
@@ -150,6 +150,7 @@ class CrunchyrollIE(CrunchyrollBaseIE):
             # rtmp
             'skip_download': True,
         },
+        'skip': 'Video gone',
     }, {
         'url': 'http://www.crunchyroll.com/rezero-starting-life-in-another-world-/episode-5-the-morning-of-our-promise-is-still-distant-702409',
         'info_dict': {
@@ -157,7 +158,7 @@ class CrunchyrollIE(CrunchyrollBaseIE):
             'ext': 'mp4',
             'title': 'Re:ZERO -Starting Life in Another World- Episode 5 – The Morning of Our Promise Is Still Distant',
             'description': 'md5:97664de1ab24bbf77a9c01918cb7dca9',
-            'thumbnail': 're:^https?://.*\.jpg$',
+            'thumbnail': r're:^https?://.*\.jpg$',
             'uploader': 'TV TOKYO',
             'upload_date': '20160508',
         },
@@ -235,7 +236,7 @@ class CrunchyrollIE(CrunchyrollBaseIE):
         output += 'WrapStyle: %s\n' % sub_root.attrib['wrap_style']
         output += 'PlayResX: %s\n' % sub_root.attrib['play_res_x']
         output += 'PlayResY: %s\n' % sub_root.attrib['play_res_y']
-        output += """ScaledBorderAndShadow: yes
+        output += """ScaledBorderAndShadow: no
 
 [V4+ Styles]
 Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding

@@ -2344,7 +2344,7 @@ try:
     from urllib.parse import unquote_plus as compat_urllib_parse_unquote_plus
 except ImportError:  # Python 2
     _asciire = (compat_urllib_parse._asciire if hasattr(compat_urllib_parse, '_asciire')
-                else re.compile('([\x00-\x7f]+)'))
+                else re.compile(r'([\x00-\x7f]+)'))
 
     # HACK: The following are the correct unquote_to_bytes, unquote and unquote_plus
     # implementations from cpython 3.4.3's stdlib. Python 2's version
@@ -2490,6 +2490,7 @@ etree = xml.etree.ElementTree
 class _TreeBuilder(etree.TreeBuilder):
     def doctype(self, name, pubid, system):
         pass
+
 
 if sys.version_info[0] >= 3:
     def compat_etree_fromstring(text):
@@ -2786,6 +2787,7 @@ def workaround_optparse_bug9161():
                 (k, enc(v)) for k, v in kwargs.items())
             return real_add_option(self, *bargs, **bkwargs)
         optparse.OptionGroup.add_option = _compat_add_option
+
 
 if hasattr(shutil, 'get_terminal_size'):  # Python >= 3.3
     compat_get_terminal_size = shutil.get_terminal_size

@@ -1339,7 +1339,7 @@ class YoutubeDL(object):
                 format['format_id'] = compat_str(i)
             else:
                 # Sanitize format_id from characters used in format selector expression
-                format['format_id'] = re.sub('[\s,/+\[\]()]', '_', format['format_id'])
+                format['format_id'] = re.sub(r'[\s,/+\[\]()]', '_', format['format_id'])
             format_id = format['format_id']
             if format_id not in formats_dict:
                 formats_dict[format_id] = []
@@ -1658,7 +1658,7 @@ class YoutubeDL(object):
                         video_ext, audio_ext = audio.get('ext'), video.get('ext')
                         if video_ext and audio_ext:
                             COMPATIBLE_EXTS = (
-                                ('mp3', 'mp4', 'm4a', 'm4p', 'm4b', 'm4r', 'm4v'),
+                                ('mp3', 'mp4', 'm4a', 'm4p', 'm4b', 'm4r', 'm4v', 'ismv', 'isma'),
                                 ('webm')
                             )
                             for exts in COMPATIBLE_EXTS:
