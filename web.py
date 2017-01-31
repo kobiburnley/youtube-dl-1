@@ -59,23 +59,21 @@ def hello_world_app(environ, start_response):
 
     sig = params.get('sig', [False])[0]
     url = params.get('url', [False])[0]
+    headers = [('Content-type', 'text/html')]
 
     if not sig or not url:
-        headers = [('Content-type', 'text/html')]
         start_response('200 OK', headers)
         return ['youtube-dl heroku <a href="https://github.com/kobiburnley/youtube-dl/blob/heroku/README.md">read me</a>']
-
     try:
         if sig and url:
-            headers = [('Content-type', 'text/html')]
-            start_response('200 OK', headers)
             # wo = youtube_dl.YoutubeDL().get_info_extractor('YoutubeIE')._decrypt_signature(sig, video_id, url);
             x = youtube_dl.YoutubeDL().get_ext(video_id)
             wo = x._decrypt_signature(sig, video_id, url)
+            start_response('200 OK', headers)
             return [wo.encode("utf-8")]
     except Exception as e:
         print e
-        headers = [('Content-type', 'text/html')]
+        start_response('500 INTERNAL SERVER ERROR', headers)
         return ['An error occurred.']
 
 
