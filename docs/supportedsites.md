@@ -33,7 +33,8 @@
  - **AdobeTVVideo**
  - **AdultSwim**
  - **aenetworks**: A+E Networks: A&E, Lifetime, History.com, FYI Network
- - **AfreecaTV**: afreecatv.com
+ - **afreecatv**: afreecatv.com
+ - **afreecatv:global**: afreecatv.com
  - **AirMozilla**
  - **AlJazeera**
  - **Allocine**
@@ -74,6 +75,8 @@
  - **awaan:live**
  - **awaan:season**
  - **awaan:video**
+ - **AZMedien**: AZ Medien videos
+ - **AZMedienPlaylist**: AZ Medien playlists
  - **Azubu**
  - **AzubuLive**
  - **BaiduVideo**: 百度视频
@@ -86,6 +89,7 @@
  - **bbc.co.uk:article**: BBC articles
  - **bbc.co.uk:iplayer:playlist**
  - **bbc.co.uk:playlist**
+ - **Beam:live**
  - **Beatport**
  - **Beeg**
  - **BehindKink**
@@ -198,6 +202,7 @@
  - **Digiteka**
  - **Discovery**
  - **DiscoveryGo**
+ - **Disney**
  - **Dotsub**
  - **DouyuTV**: 斗鱼
  - **DPlay**
@@ -332,6 +337,7 @@
  - **IPrima**
  - **iqiyi**: 爱奇艺
  - **Ir90Tv**
+ - **ITV**
  - **ivi**: ivi.ru
  - **ivi:compilation**: ivi.ru compilations
  - **ivideon**: Ivideon TV
@@ -440,6 +446,7 @@
  - **mtg**: MTG services
  - **mtv**
  - **mtv.de**
+ - **mtv81**
  - **mtv:video**
  - **mtvservices:embedded**
  - **MuenchenTV**: münchen.tv
@@ -482,6 +489,7 @@
  - **Newstube**
  - **NextMedia**: 蘋果日報
  - **NextMediaActionNews**: 蘋果日報 - 動新聞
+ - **NextTV**: 壹電視
  - **nfb**: National Film Board of Canada
  - **nfl.com**
  - **NhkVod**
@@ -571,6 +579,7 @@
  - **PolskieRadio**
  - **PolskieRadioCategory**
  - **PornCom**
+ - **PornFlip**
  - **PornHd**
  - **PornHub**: PornHub and Thumbzilla
  - **PornHubPlaylist**
@@ -779,6 +788,7 @@
  - **TV2Article**
  - **TV3**
  - **TV4**: tv4.se and tv4play.se
+ - **TVA**
  - **TVANouvelles**
  - **TVANouvellesArticle**
  - **TVC**
@@ -879,6 +889,7 @@
  - **vk:uservideos**: VK - User's Videos
  - **vk:wallpost**
  - **vlive**
+ - **vlive:channel**
  - **Vodlocker**
  - **VODPlatform**
  - **VoiceRepublic**

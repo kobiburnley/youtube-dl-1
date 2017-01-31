@@ -128,7 +128,13 @@ DATE_FORMATS = (
     '%d %B %Y',
     '%d %b %Y',
     '%B %d %Y',
+    '%B %dst %Y',
+    '%B %dnd %Y',
+    '%B %dth %Y',
     '%b %d %Y',
+    '%b %dst %Y',
+    '%b %dnd %Y',
+    '%b %dth %Y',
     '%b %dst %Y %I:%M',
     '%b %dnd %Y %I:%M',
     '%b %dth %Y %I:%M',
@@ -137,6 +143,7 @@ DATE_FORMATS = (
     '%Y/%m/%d',
     '%Y/%m/%d %H:%M',
     '%Y/%m/%d %H:%M:%S',
+    '%Y-%m-%d %H:%M',
     '%Y-%m-%d %H:%M:%S',
     '%Y-%m-%d %H:%M:%S.%f',
     '%d.%m.%Y %H:%M',
@@ -1766,7 +1773,7 @@ def parse_duration(s):
     s = s.strip()
 
     days, hours, mins, secs, ms = [None] * 5
-    m = re.match(r'(?:(?:(?:(?P<days>[0-9]+):)?(?P<hours>[0-9]+):)?(?P<mins>[0-9]+):)?(?P<secs>[0-9]+)(?P<ms>\.[0-9]+)?$', s)
+    m = re.match(r'(?:(?:(?:(?P<days>[0-9]+):)?(?P<hours>[0-9]+):)?(?P<mins>[0-9]+):)?(?P<secs>[0-9]+)(?P<ms>\.[0-9]+)?Z?$', s)
     if m:
         days, hours, mins, secs, ms = m.groups()
     else:
@@ -1783,11 +1790,11 @@ def parse_duration(s):
                 )?
                 (?:
                     (?P<secs>[0-9]+)(?P<ms>\.[0-9]+)?\s*s(?:ec(?:ond)?s?)?\s*
-                )?$''', s)
+                )?Z?$''', s)
         if m:
             days, hours, mins, secs, ms = m.groups()
         else:
-            m = re.match(r'(?i)(?:(?P<hours>[0-9.]+)\s*(?:hours?)|(?P<mins>[0-9.]+)\s*(?:mins?\.?|minutes?)\s*)$', s)
+            m = re.match(r'(?i)(?:(?P<hours>[0-9.]+)\s*(?:hours?)|(?P<mins>[0-9.]+)\s*(?:mins?\.?|minutes?)\s*)Z?$', s)
             if m:
                 hours, mins = m.groups()
             else:

@@ -30,7 +30,10 @@ from .aenetworks import (
     AENetworksIE,
     HistoryTopicIE,
 )
-from .afreecatv import AfreecaTVIE
+from .afreecatv import (
+    AfreecaTVIE,
+    AfreecaTVGlobalIE,
+)
 from .airmozilla import AirMozillaIE
 from .aljazeera import AlJazeeraIE
 from .alphaporno import AlphaPornoIE
@@ -77,6 +80,10 @@ from .awaan import (
     AWAANLiveIE,
     AWAANSeasonIE,
 )
+from .azmedien import (
+    AZMedienIE,
+    AZMedienPlaylistIE,
+)
 from .azubu import AzubuIE, AzubuLiveIE
 from .baidu import BaiduVideoIE
 from .bambuser import BambuserIE, BambuserChannelIE
@@ -88,6 +95,7 @@ from .bbc import (
     BBCCoUkPlaylistIE,
     BBCIE,
 )
+from .beampro import BeamProLiveIE
 from .beeg import BeegIE
 from .behindkink import BehindKinkIE
 from .bellmedia import BellMediaIE
@@ -243,6 +251,7 @@ from .dumpert import DumpertIE
 from .defense import DefenseGouvFrIE
 from .discovery import DiscoveryIE
 from .discoverygo import DiscoveryGoIE
+from .disney import DisneyIE
 from .dispeak import DigitallySpeakingIE
 from .dropbox import DropboxIE
 from .dw import (
@@ -406,6 +415,7 @@ from .internetvideoarchive import InternetVideoArchiveIE
 from .iprima import IPrimaIE
 from .iqiyi import IqiyiIE
 from .ir90tv import Ir90TvIE
+from .itv import ITVIE
 from .ivi import (
     IviIE,
     IviCompilationIE
@@ -544,6 +554,7 @@ from .mtv import (
     MTVVideoIE,
     MTVServicesEmbeddedIE,
     MTVDEIE,
+    MTV81IE,
 )
 from .muenchentv import MuenchenTVIE
 from .musicplayon import MusicPlayOnIE
@@ -593,6 +604,7 @@ from .nextmedia import (
     NextMediaIE,
     NextMediaActionNewsIE,
     AppleDailyIE,
+    NextTVIE,
 )
 from .nfb import NFBIE
 from .nfl import NFLIE
@@ -719,6 +731,7 @@ from .polskieradio import (
 )
 from .porn91 import Porn91IE
 from .porncom import PornComIE
+from .pornflip import PornFlipIE
 from .pornhd import PornHdIE
 from .pornhub import (
     PornHubIE,
@@ -974,6 +987,7 @@ from .tv2 import (
 )
 from .tv3 import TV3IE
 from .tv4 import TV4IE
+from .tva import TVAIE
 from .tvanouvelles import (
     TVANouvellesIE,
     TVANouvellesArticleIE,
@@ -1117,7 +1131,10 @@ from .vk import (
     VKUserVideosIE,
     VKWallPostIE,
 )
-from .vlive import VLiveIE
+from .vlive import (
+    VLiveIE,
+    VLiveChannelIE
+)
 from .vodlocker import VodlockerIE
 from .vodplatform import VODPlatformIE
 from .voicerepublic import VoiceRepublicIE
