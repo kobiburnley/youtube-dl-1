@@ -73,7 +73,8 @@ def hello_world_app(environ, start_response):
             x = youtube_dl.YoutubeDL().get_ext(video_id)
             wo = x._decrypt_signature(sig, video_id, url)
             return [wo.encode("utf-8")]
-    except:
+    except Exception as e:
+        print e
         headers = [('Content-type', 'text/html')]
         return ['An error occurred.']
 
