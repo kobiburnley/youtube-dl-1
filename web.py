@@ -59,7 +59,7 @@ def hello_world_app(environ, start_response):
 
     sig = params.get('sig', [False])[0]
     url = params.get('url', [False])[0]
-    if "ytimg.com" not in url:
+    if url.find("ytimg.com") == -1:
         url = "//s.ytimg.com%s" % url
 
     print "playerUrl: %s, sig: %s, videoId: %s" % (url, sig, id)
