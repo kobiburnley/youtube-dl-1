@@ -56,13 +56,13 @@ def hello_world_app(environ, start_response):
     params = urlparse.parse_qs(environ['QUERY_STRING'])
 
     video_id = params.get('id', [False])[0] or params.get('yb', [False])[0]
-
     sig = params.get('sig', [False])[0]
     url = params.get('url', [False])[0]
+    print "playerUrl: %s, sig: %s, videoId: %s" % (url, sig, video_id)
+
     if url.find("ytimg.com") == -1:
         url = "//s.ytimg.com%s" % url
 
-    print "playerUrl: %s, sig: %s, videoId: %s" % (url, sig, id)
     headers = [('Content-type', 'text/html')]
 
     if not sig or not url:
