@@ -75,7 +75,6 @@ def hello_world_app(environ, start_response):
             return [wo.encode("utf-8")]
     except:
         headers = [('Content-type', 'text/html')]
-        start_response('200 OK', headers)
         return ['An error occurred.']
 
 
