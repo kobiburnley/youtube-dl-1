@@ -1,3 +1,4 @@
+# coding: utf-8
 from __future__ import unicode_literals
 
 import base64
@@ -6,6 +7,7 @@ import hashlib
 import json
 import netrc
 import os
+import random
 import re
 import socket
 import sys
@@ -35,31 +37,35 @@ from ..utils import (
     clean_html,
     compiled_regex_type,
     determine_ext,
+    determine_protocol,
     error_to_compat_str,
     ExtractorError,
+    extract_attributes,
     fix_xml_ampersands,
     float_or_none,
+    GeoRestrictedError,
+    GeoUtils,
     int_or_none,
+    js_to_json,
+    mimetype2ext,
+    orderedSet,
+    parse_codecs,
+    parse_duration,
     parse_iso8601,
+    parse_m3u8_attributes,
     RegexNotFoundError,
-    sanitize_filename,
     sanitized_Request,
+    sanitize_filename,
     unescapeHTML,
     unified_strdate,
     unified_timestamp,
+    update_Request,
+    update_url_query,
+    urljoin,
     url_basename,
     xpath_element,
     xpath_text,
     xpath_with_ns,
-    determine_protocol,
-    parse_duration,
-    mimetype2ext,
-    update_Request,
-    update_url_query,
-    parse_m3u8_attributes,
-    extract_attributes,
-    parse_codecs,
-    urljoin,
 )
 
 
@@ -319,17 +325,34 @@ class InfoExtractor(object):
     _real_extract() methods and define a _VALID_URL regexp.
     Probably, they should also be added to the list of extractors.
 
+    _GEO_BYPASS attribute may be set to False in order to disable
+    geo restriction bypass mechanisms for a particular extractor.
+    Though it won't disable explicit geo restriction bypass based on
+    country code provided with geo_bypass_country. (experimental)
+
+    _GEO_COUNTRIES attribute may contain a list of presumably geo unrestricted
+    countries for this extractor. One of these countries will be used by
+    geo restriction bypass mechanism right away in order to bypass
+    geo restriction, of course, if the mechanism is not disabled. (experimental)
+
+    NB: both these geo attributes are experimental and may change in future
+    or be completely removed.
+
     Finally, the _WORKING attribute should be set to False for broken IEs
     in order to warn the users and skip the tests.
     """
 
     _ready = False
     _downloader = None
+    _x_forwarded_for_ip = None
+    _GEO_BYPASS = True
+    _GEO_COUNTRIES = None
     _WORKING = True
 
     def __init__(self, downloader=None):
         """Constructor. Receives an optional downloader."""
         self._ready = False
+        self._x_forwarded_for_ip = None
         self.set_downloader(downloader)
 
     @classmethod
@@ -358,21 +381,80 @@ class InfoExtractor(object):
 
     def initialize(self):
         """Initializes an instance (authentication, etc)."""
+        self._initialize_geo_bypass(self._GEO_COUNTRIES)
         if not self._ready:
             self._real_initialize()
             self._ready = True
 
+    def _initialize_geo_bypass(self, countries):
+        """
+        Initialize geo restriction bypass mechanism.
+
+        This method is used to initialize geo bypass mechanism based on faking
+        X-Forwarded-For HTTP header. A random country from provided country list
+        is selected and a random IP belonging to this country is generated. This
+        IP will be passed as X-Forwarded-For HTTP header in all subsequent
+        HTTP requests.
+
+        This method will be used for initial geo bypass mechanism initialization
+        during the instance initialization with _GEO_COUNTRIES.
+
+        You may also manually call it from extractor's code if geo countries
+        information is not available beforehand (e.g. obtained during
+        extraction) or due to some another reason.
+        """
+        if not self._x_forwarded_for_ip:
+            country_code = self._downloader.params.get('geo_bypass_country', None)
+            # If there is no explicit country for geo bypass specified and
+            # the extractor is known to be geo restricted let's fake IP
+            # as X-Forwarded-For right away.
+            if (not country_code and
+                    self._GEO_BYPASS and
+                    self._downloader.params.get('geo_bypass', True) and
+                    countries):
+                country_code = random.choice(countries)
+            if country_code:
+                self._x_forwarded_for_ip = GeoUtils.random_ipv4(country_code)
+                if self._downloader.params.get('verbose', False):
+                    self._downloader.to_stdout(
+                        '[debug] Using fake IP %s (%s) as X-Forwarded-For.'
+                        % (self._x_forwarded_for_ip, country_code.upper()))
+
     def extract(self, url):
         """Extracts URL information and returns it in list of dicts."""
         try:
-            self.initialize()
-            return self._real_extract(url)
+            for _ in range(2):
+                try:
+                    self.initialize()
+                    ie_result = self._real_extract(url)
+                    if self._x_forwarded_for_ip:
+                        ie_result['__x_forwarded_for_ip'] = self._x_forwarded_for_ip
+                    return ie_result
+                except GeoRestrictedError as e:
+                    if self.__maybe_fake_ip_and_retry(e.countries):
+                        continue
+                    raise
         except ExtractorError:
             raise
         except compat_http_client.IncompleteRead as e:
             raise ExtractorError('A network error has occurred.', cause=e, expected=True)
         except (KeyError, StopIteration) as e:
             raise ExtractorError('An extractor error has occurred.', cause=e)
+
+    def __maybe_fake_ip_and_retry(self, countries):
+        if (not self._downloader.params.get('geo_bypass_country', None) and
+                self._GEO_BYPASS and
+                self._downloader.params.get('geo_bypass', True) and
+                not self._x_forwarded_for_ip and
+                countries):
+            country_code = random.choice(countries)
+            self._x_forwarded_for_ip = GeoUtils.random_ipv4(country_code)
+            if self._x_forwarded_for_ip:
+                self.report_warning(
+                    'Video is geo restricted. Retrying extraction with fake IP %s (%s) as X-Forwarded-For.'
+                    % (self._x_forwarded_for_ip, country_code.upper()))
+                return True
+        return False
 
     def set_downloader(self, downloader):
         """Sets the downloader for this IE."""
@@ -433,6 +515,15 @@ class InfoExtractor(object):
         if isinstance(url_or_request, (compat_str, str)):
             url_or_request = url_or_request.partition('#')[0]
 
+        # Some sites check X-Forwarded-For HTTP header in order to figure out
+        # the origin of the client behind proxy. This allows bypassing geo
+        # restriction by faking this header's value to IP that belongs to some
+        # geo unrestricted country. We will do so once we encounter any
+        # geo restriction error.
+        if self._x_forwarded_for_ip:
+            if 'X-Forwarded-For' not in headers:
+                headers['X-Forwarded-For'] = self._x_forwarded_for_ip
+
         urlh = self._request_webpage(url_or_request, video_id, note, errnote, fatal, data=data, headers=headers, query=query)
         if urlh is False:
             assert not fatal
@@ -456,6 +547,34 @@ class InfoExtractor(object):
                 encoding = 'utf-8'
 
         return encoding
+
+    def __check_blocked(self, content):
+        first_block = content[:512]
+        if ('<title>Access to this site is blocked</title>' in content and
+                'Websense' in first_block):
+            msg = 'Access to this webpage has been blocked by Websense filtering software in your network.'
+            blocked_iframe = self._html_search_regex(
+                r'<iframe src="([^"]+)"', content,
+                'Websense information URL', default=None)
+            if blocked_iframe:
+                msg += ' Visit %s for more details' % blocked_iframe
+            raise ExtractorError(msg, expected=True)
+        if '<title>The URL you requested has been blocked</title>' in first_block:
+            msg = (
+                'Access to this webpage has been blocked by Indian censorship. '
+                'Use a VPN or proxy server (with --proxy) to route around it.')
+            block_msg = self._html_search_regex(
+                r'</h1><p>(.*?)</p>',
+                content, 'block message', default=None)
+            if block_msg:
+                msg += ' (Message: "%s")' % block_msg.replace('\n', ' ')
+            raise ExtractorError(msg, expected=True)
+        if ('<title>TTK :: Доступ к ресурсу ограничен</title>' in content and
+                'blocklist.rkn.gov.ru' in content):
+            raise ExtractorError(
+                'Access to this webpage has been blocked by decision of the Russian government. '
+                'Visit http://blocklist.rkn.gov.ru/ for a block reason.',
+                expected=True)
 
     def _webpage_read_content(self, urlh, url_or_request, video_id, note=None, errnote=None, fatal=True, prefix=None, encoding=None):
         content_type = urlh.headers.get('Content-Type', '')
@@ -498,25 +617,7 @@ class InfoExtractor(object):
         except LookupError:
             content = webpage_bytes.decode('utf-8', 'replace')
 
-        if ('<title>Access to this site is blocked</title>' in content and
-                'Websense' in content[:512]):
-            msg = 'Access to this webpage has been blocked by Websense filtering software in your network.'
-            blocked_iframe = self._html_search_regex(
-                r'<iframe src="([^"]+)"', content,
-                'Websense information URL', default=None)
-            if blocked_iframe:
-                msg += ' Visit %s for more details' % blocked_iframe
-            raise ExtractorError(msg, expected=True)
-        if '<title>The URL you requested has been blocked</title>' in content[:512]:
-            msg = (
-                'Access to this webpage has been blocked by Indian censorship. '
-                'Use a VPN or proxy server (with --proxy) to route around it.')
-            block_msg = self._html_search_regex(
-                r'</h1><p>(.*?)</p>',
-                content, 'block message', default=None)
-            if block_msg:
-                msg += ' (Message: "%s")' % block_msg.replace('\n', ' ')
-            raise ExtractorError(msg, expected=True)
+        self.__check_blocked(content)
 
         return content
 
@@ -608,10 +709,8 @@ class InfoExtractor(object):
             expected=True)
 
     @staticmethod
-    def raise_geo_restricted(msg='This video is not available from your location due to geo restriction'):
-        raise ExtractorError(
-            '%s. You might want to use --proxy to workaround.' % msg,
-            expected=True)
+    def raise_geo_restricted(msg='This video is not available from your location due to geo restriction', countries=None):
+        raise GeoRestrictedError(msg, countries=countries)
 
     # Methods for following #608
     @staticmethod
@@ -626,6 +725,13 @@ class InfoExtractor(object):
         if video_title is not None:
             video_info['title'] = video_title
         return video_info
+
+    def playlist_from_matches(self, matches, video_id, video_title, getter=None, ie=None):
+        urlrs = orderedSet(
+            self.url_result(self._proto_relative_url(getter(m) if getter else m), ie)
+            for m in matches)
+        return self.playlist_result(
+            urlrs, playlist_id=video_id, playlist_title=video_title)
 
     @staticmethod
     def playlist_result(entries, playlist_id=None, playlist_title=None, playlist_description=None):
@@ -870,6 +976,22 @@ class InfoExtractor(object):
             return info
         if isinstance(json_ld, dict):
             json_ld = [json_ld]
+
+        def extract_video_object(e):
+            assert e['@type'] == 'VideoObject'
+            info.update({
+                'url': e.get('contentUrl'),
+                'title': unescapeHTML(e.get('name')),
+                'description': unescapeHTML(e.get('description')),
+                'thumbnail': e.get('thumbnailUrl') or e.get('thumbnailURL'),
+                'duration': parse_duration(e.get('duration')),
+                'timestamp': unified_timestamp(e.get('uploadDate')),
+                'filesize': float_or_none(e.get('contentSize')),
+                'tbr': int_or_none(e.get('bitrate')),
+                'width': int_or_none(e.get('width')),
+                'height': int_or_none(e.get('height')),
+            })
+
         for e in json_ld:
             if e.get('@context') == 'http://schema.org':
                 item_type = e.get('@type')
@@ -894,18 +1016,11 @@ class InfoExtractor(object):
                         'description': unescapeHTML(e.get('articleBody')),
                     })
                 elif item_type == 'VideoObject':
-                    info.update({
-                        'url': e.get('contentUrl'),
-                        'title': unescapeHTML(e.get('name')),
-                        'description': unescapeHTML(e.get('description')),
-                        'thumbnail': e.get('thumbnailUrl') or e.get('thumbnailURL'),
-                        'duration': parse_duration(e.get('duration')),
-                        'timestamp': unified_timestamp(e.get('uploadDate')),
-                        'filesize': float_or_none(e.get('contentSize')),
-                        'tbr': int_or_none(e.get('bitrate')),
-                        'width': int_or_none(e.get('width')),
-                        'height': int_or_none(e.get('height')),
-                    })
+                    extract_video_object(e)
+                elif item_type == 'WebPage':
+                    video = e.get('video')
+                    if isinstance(video, dict) and video.get('@type') == 'VideoObject':
+                        extract_video_object(video)
                 break
         return dict((k, v) for k, v in info.items() if v is not None)
 
@@ -1025,13 +1140,13 @@ class InfoExtractor(object):
                 unique_formats.append(f)
         formats[:] = unique_formats
 
-    def _is_valid_url(self, url, video_id, item='video'):
+    def _is_valid_url(self, url, video_id, item='video', headers={}):
         url = self._proto_relative_url(url, scheme='http:')
         # For now assume non HTTP(S) URLs always valid
         if not (url.startswith('http://') or url.startswith('https://')):
             return True
         try:
-            self._request_webpage(url, video_id, 'Checking %s URL' % item)
+            self._request_webpage(url, video_id, 'Checking %s URL' % item, headers=headers)
             return True
         except ExtractorError as e:
             if isinstance(e.cause, compat_urllib_error.URLError):
@@ -1197,37 +1312,50 @@ class InfoExtractor(object):
                               entry_protocol='m3u8', preference=None,
                               m3u8_id=None, note=None, errnote=None,
                               fatal=True, live=False):
-
         res = self._download_webpage_handle(
             m3u8_url, video_id,
             note=note or 'Downloading m3u8 information',
             errnote=errnote or 'Failed to download m3u8 information',
             fatal=fatal)
+
         if res is False:
             return []
+
         m3u8_doc, urlh = res
         m3u8_url = urlh.geturl()
 
-        formats = [self._m3u8_meta_format(m3u8_url, ext, preference, m3u8_id)]
+        return self._parse_m3u8_formats(
+            m3u8_doc, m3u8_url, ext=ext, entry_protocol=entry_protocol,
+            preference=preference, m3u8_id=m3u8_id, live=live)
+
+    def _parse_m3u8_formats(self, m3u8_doc, m3u8_url, ext=None,
+                            entry_protocol='m3u8', preference=None,
+                            m3u8_id=None, live=False):
+        if '#EXT-X-FAXS-CM:' in m3u8_doc:  # Adobe Flash Access
+            return []
+
+        formats = []
 
         format_url = lambda u: (
             u
             if re.match(r'^https?://', u)
             else compat_urlparse.urljoin(m3u8_url, u))
 
-        # We should try extracting formats only from master playlists [1], i.e.
-        # playlists that describe available qualities. On the other hand media
-        # playlists [2] should be returned as is since they contain just the media
-        # without qualities renditions.
+        # References:
+        # 1. https://tools.ietf.org/html/draft-pantos-http-live-streaming-21
+        # 2. https://github.com/rg3/youtube-dl/issues/12211
+
+        # We should try extracting formats only from master playlists [1, 4.3.4],
+        # i.e. playlists that describe available qualities. On the other hand
+        # media playlists [1, 4.3.3] should be returned as is since they contain
+        # just the media without qualities renditions.
         # Fortunately, master playlist can be easily distinguished from media
-        # playlist based on particular tags availability. As of [1, 2] master
-        # playlist tags MUST NOT appear in a media playist and vice versa.
-        # As of [3] #EXT-X-TARGETDURATION tag is REQUIRED for every media playlist
-        # and MUST NOT appear in master playlist thus we can clearly detect media
-        # playlist with this criterion.
-        # 1. https://tools.ietf.org/html/draft-pantos-http-live-streaming-17#section-4.3.4
-        # 2. https://tools.ietf.org/html/draft-pantos-http-live-streaming-17#section-4.3.3
-        # 3. https://tools.ietf.org/html/draft-pantos-http-live-streaming-17#section-4.3.3.1
+        # playlist based on particular tags availability. As of [1, 4.3.3, 4.3.4]
+        # master playlist tags MUST NOT appear in a media playist and vice versa.
+        # As of [1, 4.3.3.1] #EXT-X-TARGETDURATION tag is REQUIRED for every
+        # media playlist and MUST NOT appear in master playlist thus we can
+        # clearly detect media playlist with this criterion.
+
         if '#EXT-X-TARGETDURATION' in m3u8_doc:  # media playlist, return as is
             return [{
                 'url': m3u8_url,
@@ -1236,52 +1364,72 @@ class InfoExtractor(object):
                 'protocol': entry_protocol,
                 'preference': preference,
             }]
-        audio_in_video_stream = {}
-        last_info = {}
-        last_media = {}
+
+        groups = {}
+        last_stream_inf = {}
+
+        def extract_media(x_media_line):
+            media = parse_m3u8_attributes(x_media_line)
+            # As per [1, 4.3.4.1] TYPE, GROUP-ID and NAME are REQUIRED
+            media_type, group_id, name = media.get('TYPE'), media.get('GROUP-ID'), media.get('NAME')
+            if not (media_type and group_id and name):
+                return
+            groups.setdefault(group_id, []).append(media)
+            if media_type not in ('VIDEO', 'AUDIO'):
+                return
+            media_url = media.get('URI')
+            if media_url:
+                format_id = []
+                for v in (group_id, name):
+                    if v:
+                        format_id.append(v)
+                f = {
+                    'format_id': '-'.join(format_id),
+                    'url': format_url(media_url),
+                    'manifest_url': m3u8_url,
+                    'language': media.get('LANGUAGE'),
+                    'ext': ext,
+                    'protocol': entry_protocol,
+                    'preference': preference,
+                }
+                if media_type == 'AUDIO':
+                    f['vcodec'] = 'none'
+                formats.append(f)
+
+        def build_stream_name():
+            # Despite specification does not mention NAME attribute for
+            # EXT-X-STREAM-INF tag it still sometimes may be present (see [1]
+            # or vidio test in TestInfoExtractor.test_parse_m3u8_formats)
+            # 1. http://www.vidio.com/watch/165683-dj_ambred-booyah-live-2015
+            stream_name = last_stream_inf.get('NAME')
+            if stream_name:
+                return stream_name
+            # If there is no NAME in EXT-X-STREAM-INF it will be obtained
+            # from corresponding rendition group
+            stream_group_id = last_stream_inf.get('VIDEO')
+            if not stream_group_id:
+                return
+            stream_group = groups.get(stream_group_id)
+            if not stream_group:
+                return stream_group_id
+            rendition = stream_group[0]
+            return rendition.get('NAME') or stream_group_id
+
         for line in m3u8_doc.splitlines():
             if line.startswith('#EXT-X-STREAM-INF:'):
-                last_info = parse_m3u8_attributes(line)
+                last_stream_inf = parse_m3u8_attributes(line)
             elif line.startswith('#EXT-X-MEDIA:'):
-                media = parse_m3u8_attributes(line)
-                media_type = media.get('TYPE')
-                if media_type in ('VIDEO', 'AUDIO'):
-                    group_id = media.get('GROUP-ID')
-                    media_url = media.get('URI')
-                    if media_url:
-                        format_id = []
-                        for v in (group_id, media.get('NAME')):
-                            if v:
-                                format_id.append(v)
-                        f = {
-                            'format_id': '-'.join(format_id),
-                            'url': format_url(media_url),
-                            'language': media.get('LANGUAGE'),
-                            'ext': ext,
-                            'protocol': entry_protocol,
-                            'preference': preference,
-                        }
-                        if media_type == 'AUDIO':
-                            f['vcodec'] = 'none'
-                            if group_id and not audio_in_video_stream.get(group_id):
-                                audio_in_video_stream[group_id] = False
-                        formats.append(f)
-                    else:
-                        # When there is no URI in EXT-X-MEDIA let this tag's
-                        # data be used by regular URI lines below
-                        last_media = media
-                        if media_type == 'AUDIO' and group_id:
-                            audio_in_video_stream[group_id] = True
+                extract_media(line)
             elif line.startswith('#') or not line.strip():
                 continue
             else:
-                tbr = int_or_none(last_info.get('AVERAGE-BANDWIDTH') or last_info.get('BANDWIDTH'), scale=1000)
+                tbr = float_or_none(
+                    last_stream_inf.get('AVERAGE-BANDWIDTH') or
+                    last_stream_inf.get('BANDWIDTH'), scale=1000)
                 format_id = []
                 if m3u8_id:
                     format_id.append(m3u8_id)
-                # Despite specification does not mention NAME attribute for
-                # EXT-X-STREAM-INF it still sometimes may be present
-                stream_name = last_info.get('NAME') or last_media.get('NAME')
+                stream_name = build_stream_name()
                 # Bandwidth of live streams may differ over time thus making
                 # format_id unpredictable. So it's better to keep provided
                 # format_id intact.
@@ -1291,14 +1439,14 @@ class InfoExtractor(object):
                 f = {
                     'format_id': '-'.join(format_id),
                     'url': manifest_url,
-                    'manifest_url': manifest_url,
+                    'manifest_url': m3u8_url,
                     'tbr': tbr,
                     'ext': ext,
-                    'fps': float_or_none(last_info.get('FRAME-RATE')),
+                    'fps': float_or_none(last_stream_inf.get('FRAME-RATE')),
                     'protocol': entry_protocol,
                     'preference': preference,
                 }
-                resolution = last_info.get('RESOLUTION')
+                resolution = last_stream_inf.get('RESOLUTION')
                 if resolution:
                     mobj = re.search(r'(?P<width>\d+)[xX](?P<height>\d+)', resolution)
                     if mobj:
@@ -1314,13 +1462,26 @@ class InfoExtractor(object):
                         'vbr': vbr,
                         'abr': abr,
                     })
-                f.update(parse_codecs(last_info.get('CODECS')))
-                if audio_in_video_stream.get(last_info.get('AUDIO')) is False:
-                    # TODO: update acodec for for audio only formats with the same GROUP-ID
-                    f['acodec'] = 'none'
+                codecs = parse_codecs(last_stream_inf.get('CODECS'))
+                f.update(codecs)
+                audio_group_id = last_stream_inf.get('AUDIO')
+                # As per [1, 4.3.4.1.1] any EXT-X-STREAM-INF tag which
+                # references a rendition group MUST have a CODECS attribute.
+                # However, this is not always respected, for example, [2]
+                # contains EXT-X-STREAM-INF tag which references AUDIO
+                # rendition group but does not have CODECS and despite
+                # referencing audio group an audio group, it represents
+                # a complete (with audio and video) format. So, for such cases
+                # we will ignore references to rendition groups and treat them
+                # as complete formats.
+                if audio_group_id and codecs and f.get('vcodec') != 'none':
+                    audio_group = groups.get(audio_group_id)
+                    if audio_group and audio_group[0].get('URI'):
+                        # TODO: update acodec for audio only formats with
+                        # the same GROUP-ID
+                        f['acodec'] = 'none'
                 formats.append(f)
-                last_info = {}
-                last_media = {}
+                last_stream_inf = {}
         return formats
 
     @staticmethod
@@ -1670,7 +1831,7 @@ class InfoExtractor(object):
                     if content_type == 'text':
                         # TODO implement WebVTT downloading
                         pass
-                    elif content_type == 'video' or content_type == 'audio':
+                    elif content_type in ('video', 'audio'):
                         base_url = ''
                         for element in (representation, adaptation_set, period, mpd_doc):
                             base_url_e = element.find(_add_ns('BaseURL'))
@@ -1694,7 +1855,7 @@ class InfoExtractor(object):
                             'ext': mimetype2ext(mime_type),
                             'width': int_or_none(representation_attrib.get('width')),
                             'height': int_or_none(representation_attrib.get('height')),
-                            'tbr': int_or_none(bandwidth, 1000),
+                            'tbr': float_or_none(bandwidth, 1000),
                             'asr': int_or_none(representation_attrib.get('audioSamplingRate')),
                             'fps': int_or_none(representation_attrib.get('frameRate')),
                             'language': lang if lang not in ('mul', 'und', 'zxx', 'mis') else None,
@@ -1920,7 +2081,7 @@ class InfoExtractor(object):
                 })
         return formats
 
-    def _parse_html5_media_entries(self, base_url, webpage, video_id, m3u8_id=None, m3u8_entry_protocol='m3u8', mpd_id=None):
+    def _parse_html5_media_entries(self, base_url, webpage, video_id, m3u8_id=None, m3u8_entry_protocol='m3u8', mpd_id=None, preference=None):
         def absolute_url(video_url):
             return compat_urlparse.urljoin(base_url, video_url)
 
@@ -1942,7 +2103,8 @@ class InfoExtractor(object):
                 is_plain_url = False
                 formats = self._extract_m3u8_formats(
                     full_url, video_id, ext='mp4',
-                    entry_protocol=m3u8_entry_protocol, m3u8_id=m3u8_id)
+                    entry_protocol=m3u8_entry_protocol, m3u8_id=m3u8_id,
+                    preference=preference)
             elif ext == 'mpd':
                 is_plain_url = False
                 formats = self._extract_mpd_formats(
@@ -1959,7 +2121,12 @@ class InfoExtractor(object):
         media_tags = [(media_tag, media_type, '')
                       for media_tag, media_type
                       in re.findall(r'(?s)(<(video|audio)[^>]*/>)', webpage)]
-        media_tags.extend(re.findall(r'(?s)(<(?P<tag>video|audio)[^>]*>)(.*?)</(?P=tag)>', webpage))
+        media_tags.extend(re.findall(
+            # We only allow video|audio followed by a whitespace or '>'.
+            # Allowing more characters may end up in significant slow down (see
+            # https://github.com/rg3/youtube-dl/issues/11979, example URL:
+            # http://www.porntrex.com/maps/videositemap.xml).
+            r'(?s)(<(?P<tag>video|audio)(?:\s+[^>]*)?>)(.*?)</(?P=tag)>', webpage))
         for media_tag, media_type, media_content in media_tags:
             media_info = {
                 'formats': [],
@@ -2063,6 +2230,147 @@ class InfoExtractor(object):
                         'format_id': protocol,
                         'protocol': protocol,
                     })
+        return formats
+
+    def _find_jwplayer_data(self, webpage, video_id=None, transform_source=js_to_json):
+        mobj = re.search(
+            r'(?s)jwplayer\((?P<quote>[\'"])[^\'" ]+(?P=quote)\)(?!</script>).*?\.setup\s*\((?P<options>[^)]+)\)',
+            webpage)
+        if mobj:
+            try:
+                jwplayer_data = self._parse_json(mobj.group('options'),
+                                                 video_id=video_id,
+                                                 transform_source=transform_source)
+            except ExtractorError:
+                pass
+            else:
+                if isinstance(jwplayer_data, dict):
+                    return jwplayer_data
+
+    def _extract_jwplayer_data(self, webpage, video_id, *args, **kwargs):
+        jwplayer_data = self._find_jwplayer_data(
+            webpage, video_id, transform_source=js_to_json)
+        return self._parse_jwplayer_data(
+            jwplayer_data, video_id, *args, **kwargs)
+
+    def _parse_jwplayer_data(self, jwplayer_data, video_id=None, require_title=True,
+                             m3u8_id=None, mpd_id=None, rtmp_params=None, base_url=None):
+        # JWPlayer backward compatibility: flattened playlists
+        # https://github.com/jwplayer/jwplayer/blob/v7.4.3/src/js/api/config.js#L81-L96
+        if 'playlist' not in jwplayer_data:
+            jwplayer_data = {'playlist': [jwplayer_data]}
+
+        entries = []
+
+        # JWPlayer backward compatibility: single playlist item
+        # https://github.com/jwplayer/jwplayer/blob/v7.7.0/src/js/playlist/playlist.js#L10
+        if not isinstance(jwplayer_data['playlist'], list):
+            jwplayer_data['playlist'] = [jwplayer_data['playlist']]
+
+        for video_data in jwplayer_data['playlist']:
+            # JWPlayer backward compatibility: flattened sources
+            # https://github.com/jwplayer/jwplayer/blob/v7.4.3/src/js/playlist/item.js#L29-L35
+            if 'sources' not in video_data:
+                video_data['sources'] = [video_data]
+
+            this_video_id = video_id or video_data['mediaid']
+
+            formats = self._parse_jwplayer_formats(
+                video_data['sources'], video_id=this_video_id, m3u8_id=m3u8_id,
+                mpd_id=mpd_id, rtmp_params=rtmp_params, base_url=base_url)
+            self._sort_formats(formats)
+
+            subtitles = {}
+            tracks = video_data.get('tracks')
+            if tracks and isinstance(tracks, list):
+                for track in tracks:
+                    if track.get('kind') != 'captions':
+                        continue
+                    track_url = urljoin(base_url, track.get('file'))
+                    if not track_url:
+                        continue
+                    subtitles.setdefault(track.get('label') or 'en', []).append({
+                        'url': self._proto_relative_url(track_url)
+                    })
+
+            entries.append({
+                'id': this_video_id,
+                'title': video_data['title'] if require_title else video_data.get('title'),
+                'description': video_data.get('description'),
+                'thumbnail': self._proto_relative_url(video_data.get('image')),
+                'timestamp': int_or_none(video_data.get('pubdate')),
+                'duration': float_or_none(jwplayer_data.get('duration') or video_data.get('duration')),
+                'subtitles': subtitles,
+                'formats': formats,
+            })
+        if len(entries) == 1:
+            return entries[0]
+        else:
+            return self.playlist_result(entries)
+
+    def _parse_jwplayer_formats(self, jwplayer_sources_data, video_id=None,
+                                m3u8_id=None, mpd_id=None, rtmp_params=None, base_url=None):
+        urls = []
+        formats = []
+        for source in jwplayer_sources_data:
+            source_url = self._proto_relative_url(source.get('file'))
+            if not source_url:
+                continue
+            if base_url:
+                source_url = compat_urlparse.urljoin(base_url, source_url)
+            if source_url in urls:
+                continue
+            urls.append(source_url)
+            source_type = source.get('type') or ''
+            ext = mimetype2ext(source_type) or determine_ext(source_url)
+            if source_type == 'hls' or ext == 'm3u8':
+                formats.extend(self._extract_m3u8_formats(
+                    source_url, video_id, 'mp4', entry_protocol='m3u8_native',
+                    m3u8_id=m3u8_id, fatal=False))
+            elif ext == 'mpd':
+                formats.extend(self._extract_mpd_formats(
+                    source_url, video_id, mpd_id=mpd_id, fatal=False))
+            elif ext == 'smil':
+                formats.extend(self._extract_smil_formats(
+                    source_url, video_id, fatal=False))
+            # https://github.com/jwplayer/jwplayer/blob/master/src/js/providers/default.js#L67
+            elif source_type.startswith('audio') or ext in (
+                    'oga', 'aac', 'mp3', 'mpeg', 'vorbis'):
+                formats.append({
+                    'url': source_url,
+                    'vcodec': 'none',
+                    'ext': ext,
+                })
+            else:
+                height = int_or_none(source.get('height'))
+                if height is None:
+                    # Often no height is provided but there is a label in
+                    # format like "1080p", "720p SD", or 1080.
+                    height = int_or_none(self._search_regex(
+                        r'^(\d{3,4})[pP]?(?:\b|$)', compat_str(source.get('label') or ''),
+                        'height', default=None))
+                a_format = {
+                    'url': source_url,
+                    'width': int_or_none(source.get('width')),
+                    'height': height,
+                    'tbr': int_or_none(source.get('bitrate')),
+                    'ext': ext,
+                }
+                if source_url.startswith('rtmp'):
+                    a_format['ext'] = 'flv'
+                    # See com/longtailvideo/jwplayer/media/RTMPMediaProvider.as
+                    # of jwplayer.flash.swf
+                    rtmp_url_parts = re.split(
+                        r'((?:mp4|mp3|flv):)', source_url, 1)
+                    if len(rtmp_url_parts) == 3:
+                        rtmp_url, prefix, play_path = rtmp_url_parts
+                        a_format.update({
+                            'url': rtmp_url,
+                            'play_path': prefix + play_path,
+                        })
+                    if rtmp_params:
+                        a_format.update(rtmp_params)
+                formats.append(a_format)
         return formats
 
     def _live_title(self, name):

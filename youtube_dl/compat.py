@@ -2692,7 +2692,7 @@ else:
                 userhome = pwent.pw_dir
             userhome = userhome.rstrip('/')
             return (userhome + path[i:]) or '/'
-    elif compat_os_name == 'nt' or compat_os_name == 'ce':
+    elif compat_os_name in ('nt', 'ce'):
         def compat_expanduser(path):
             """Expand ~ and ~user constructs.
 
@@ -2758,6 +2758,12 @@ except TypeError:
         return dict((bytes(k), v) for k, v in kwargs.items())
 else:
     compat_kwargs = lambda kwargs: kwargs
+
+
+try:
+    compat_numeric_types = (int, float, long, complex)
+except NameError:  # Python 3
+    compat_numeric_types = (int, float, complex)
 
 
 if sys.version_info < (2, 7):
@@ -2883,6 +2889,7 @@ __all__ = [
     'compat_cookiejar',
     'compat_cookies',
     'compat_etree_fromstring',
+    'compat_etree_register_namespace',
     'compat_expanduser',
     'compat_get_terminal_size',
     'compat_getenv',
@@ -2894,6 +2901,7 @@ __all__ = [
     'compat_input',
     'compat_itertools_count',
     'compat_kwargs',
+    'compat_numeric_types',
     'compat_ord',
     'compat_os_name',
     'compat_parse_qs',

@@ -34,12 +34,12 @@ class BandcampIE(InfoExtractor):
         '_skip': 'There is a limit of 200 free downloads / month for the test song'
     }, {
         'url': 'http://benprunty.bandcamp.com/track/lanius-battle',
-        'md5': '73d0b3171568232574e45652f8720b5c',
+        'md5': '0369ace6b939f0927e62c67a1a8d9fa7',
         'info_dict': {
             'id': '2650410135',
-            'ext': 'mp3',
-            'title': 'Lanius (Battle)',
-            'uploader': 'Ben Prunty Music',
+            'ext': 'aiff',
+            'title': 'Ben Prunty - Lanius (Battle)',
+            'uploader': 'Ben Prunty',
         },
     }]
 
@@ -209,6 +209,15 @@ class BandcampAlbumIE(InfoExtractor):
             'id': 'entropy-ep',
         },
         'playlist_mincount': 3,
+    }, {
+        # not all tracks have songs
+        'url': 'https://insulters.bandcamp.com/album/we-are-the-plague',
+        'info_dict': {
+            'id': 'we-are-the-plague',
+            'title': 'WE ARE THE PLAGUE',
+            'uploader_id': 'insulters',
+        },
+        'playlist_count': 2,
     }]
 
     def _real_extract(self, url):
@@ -217,12 +226,16 @@ class BandcampAlbumIE(InfoExtractor):
         album_id = mobj.group('album_id')
         playlist_id = album_id or uploader_id
         webpage = self._download_webpage(url, playlist_id)
-        tracks_paths = re.findall(r'<a href="(.*?)" itemprop="url">', webpage)
-        if not tracks_paths:
+        track_elements = re.findall(
+            r'(?s)<div[^>]*>(.*?<a[^>]+href="([^"]+?)"[^>]+itemprop="url"[^>]*>.*?)</div>', webpage)
+        if not track_elements:
             raise ExtractorError('The page doesn\'t contain any tracks')
+        # Only tracks with duration info have songs
         entries = [
             self.url_result(compat_urlparse.urljoin(url, t_path), ie=BandcampIE.ie_key())
-            for t_path in tracks_paths]
+            for elem_content, t_path in track_elements
+            if self._html_search_meta('duration', elem_content, default=None)]
+
         title = self._html_search_regex(
             r'album_title\s*:\s*"((?:\\.|[^"\\])+?)"',
             webpage, 'title', fatal=False)
