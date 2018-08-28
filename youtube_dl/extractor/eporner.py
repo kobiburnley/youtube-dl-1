@@ -11,11 +11,12 @@ from ..utils import (
     int_or_none,
     parse_duration,
     str_to_int,
+    url_or_none,
 )
 
 
 class EpornerIE(InfoExtractor):
-    _VALID_URL = r'https?://(?:www\.)?eporner\.com/hd-porn/(?P<id>\w+)(?:/(?P<display_id>[\w-]+))?'
+    _VALID_URL = r'https?://(?:www\.)?eporner\.com/(?:hd-porn|embed)/(?P<id>\w+)(?:/(?P<display_id>[\w-]+))?'
     _TESTS = [{
         'url': 'http://www.eporner.com/hd-porn/95008/Infamous-Tiffany-Teen-Strip-Tease-Video/',
         'md5': '39d486f046212d8e1b911c52ab4691f8',
@@ -31,6 +32,9 @@ class EpornerIE(InfoExtractor):
     }, {
         # New (May 2016) URL layout
         'url': 'http://www.eporner.com/hd-porn/3YRUtzMcWn0/Star-Wars-XXX-Parody/',
+        'only_matching': True,
+    }, {
+        'url': 'http://www.eporner.com/hd-porn/3YRUtzMcWn0',
         'only_matching': True,
     }, {
         'url': 'http://www.eporner.com/hd-porn/3YRUtzMcWn0',
@@ -79,8 +83,8 @@ class EpornerIE(InfoExtractor):
             for format_id, format_dict in formats_dict.items():
                 if not isinstance(format_dict, dict):
                     continue
-                src = format_dict.get('src')
-                if not isinstance(src, compat_str) or not src.startswith('http'):
+                src = url_or_none(format_dict.get('src'))
+                if not src or not src.startswith('http'):
                     continue
                 if kind == 'hls':
                     formats.extend(self._extract_m3u8_formats(

@@ -3,11 +3,12 @@ from __future__ import unicode_literals
 
 from .common import InfoExtractor
 from ..utils import (
-    int_or_none,
-    parse_iso8601,
-    mimetype2ext,
     determine_ext,
     ExtractorError,
+    int_or_none,
+    mimetype2ext,
+    parse_iso8601,
+    url_or_none,
 )
 
 
@@ -34,9 +35,12 @@ class AMPIE(InfoExtractor):
             if isinstance(media_thumbnail, dict):
                 media_thumbnail = [media_thumbnail]
             for thumbnail_data in media_thumbnail:
-                thumbnail = thumbnail_data['@attributes']
+                thumbnail = thumbnail_data.get('@attributes', {})
+                thumbnail_url = url_or_none(thumbnail.get('url'))
+                if not thumbnail_url:
+                    continue
                 thumbnails.append({
-                    'url': self._proto_relative_url(thumbnail['url'], 'http:'),
+                    'url': self._proto_relative_url(thumbnail_url, 'http:'),
                     'width': int_or_none(thumbnail.get('width')),
                     'height': int_or_none(thumbnail.get('height')),
                 })
@@ -47,9 +51,14 @@ class AMPIE(InfoExtractor):
             if isinstance(media_subtitle, dict):
                 media_subtitle = [media_subtitle]
             for subtitle_data in media_subtitle:
-                subtitle = subtitle_data['@attributes']
-                lang = subtitle.get('lang') or 'en'
-                subtitles[lang] = [{'url': subtitle['href']}]
+                subtitle = subtitle_data.get('@attributes', {})
+                subtitle_href = url_or_none(subtitle.get('href'))
+                if not subtitle_href:
+                    continue
+                subtitles.setdefault(subtitle.get('lang') or 'en', []).append({
+                    'url': subtitle_href,
+                    'ext': mimetype2ext(subtitle.get('type')) or determine_ext(subtitle_href),
+                })
 
         formats = []
         media_content = get_media_node('content')
@@ -57,7 +66,7 @@ class AMPIE(InfoExtractor):
             media_content = [media_content]
         for media_data in media_content:
             media = media_data.get('@attributes', {})
-            media_url = media.get('url')
+            media_url = url_or_none(media.get('url'))
             if not media_url:
                 continue
             ext = mimetype2ext(media.get('type')) or determine_ext(media_url)
@@ -71,7 +80,7 @@ class AMPIE(InfoExtractor):
             else:
                 formats.append({
                     'format_id': media_data.get('media-category', {}).get('@attributes', {}).get('label'),
-                    'url': media['url'],
+                    'url': media_url,
                     'tbr': int_or_none(media.get('bitrate')),
                     'filesize': int_or_none(media.get('fileSize')),
                     'ext': ext,

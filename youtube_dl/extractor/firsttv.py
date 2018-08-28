@@ -10,6 +10,7 @@ from ..utils import (
     int_or_none,
     qualities,
     unified_strdate,
+    url_or_none,
 )
 
 
@@ -88,8 +89,8 @@ class FirstTVIE(InfoExtractor):
             formats = []
             path = None
             for f in item.get('mbr', []):
-                src = f.get('src')
-                if not src or not isinstance(src, compat_str):
+                src = url_or_none(f.get('src'))
+                if not src:
                     continue
                 tbr = int_or_none(self._search_regex(
                     r'_(\d{3,})\.mp4', src, 'tbr', default=None))
@@ -102,6 +103,8 @@ class FirstTVIE(InfoExtractor):
                     'format_id': f.get('name'),
                     'tbr': tbr,
                     'source_preference': quality(f.get('name')),
+                    # quality metadata of http formats may be incorrect
+                    'preference': -1,
                 })
             # m3u8 URL format is reverse engineered from [1] (search for
             # master.m3u8). dashEdges (that is currently balancer-vod.1tv.ru)

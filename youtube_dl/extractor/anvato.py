@@ -5,6 +5,7 @@ import base64
 import hashlib
 import json
 import random
+import re
 import time
 
 from .common import InfoExtractor
@@ -16,6 +17,8 @@ from ..utils import (
     intlist_to_bytes,
     int_or_none,
     strip_jsonp,
+    unescapeHTML,
+    unsmuggle_url,
 )
 
 
@@ -26,6 +29,8 @@ def md5_text(s):
 
 
 class AnvatoIE(InfoExtractor):
+    _VALID_URL = r'anvato:(?P<access_key_or_mcp>[^:]+):(?P<id>\d+)'
+
     # Copied from anvplayer.min.js
     _ANVACK_TABLE = {
         'nbcu_nbcd_desktop_web_prod_93d8ead38ce2024f8f544b78306fbd15895ae5e6': 'NNemUkySjxLyPTKvZRiGntBIjEyK8uqicjMakIaQ',
@@ -114,7 +119,47 @@ class AnvatoIE(InfoExtractor):
         'nbcu_nbcd_desktop_web_prod_93d8ead38ce2024f8f544b78306fbd15895ae5e6_secure': 'NNemUkySjxLyPTKvZRiGntBIjEyK8uqicjMakIaQ'
     }
 
+    _MCP_TO_ACCESS_KEY_TABLE = {
+        'qa': 'anvato_mcpqa_demo_web_stage_18b55e00db5a13faa8d03ae6e41f6f5bcb15b922',
+        'lin': 'anvato_mcp_lin_web_prod_4c36fbfd4d8d8ecae6488656e21ac6d1ac972749',
+        'univison': 'anvato_mcp_univision_web_prod_37fe34850c99a3b5cdb71dab10a417dd5cdecafa',
+        'uni': 'anvato_mcp_univision_web_prod_37fe34850c99a3b5cdb71dab10a417dd5cdecafa',
+        'dev': 'anvato_mcp_fs2go_web_prod_c7b90a93e171469cdca00a931211a2f556370d0a',
+        'sps': 'anvato_mcp_sps_web_prod_54bdc90dd6ba21710e9f7074338365bba28da336',
+        'spsstg': 'anvato_mcp_sps_web_prod_54bdc90dd6ba21710e9f7074338365bba28da336',
+        'anv': 'anvato_mcp_anv_web_prod_791407490f4c1ef2a4bcb21103e0cb1bcb3352b3',
+        'gray': 'anvato_mcp_gray_web_prod_4c10f067c393ed8fc453d3930f8ab2b159973900',
+        'hearst': 'anvato_mcp_hearst_web_prod_5356c3de0fc7c90a3727b4863ca7fec3a4524a99',
+        'cbs': 'anvato_mcp_cbs_web_prod_02f26581ff80e5bda7aad28226a8d369037f2cbe',
+        'telemundo': 'anvato_mcp_telemundo_web_prod_c5278d51ad46fda4b6ca3d0ea44a7846a054f582'
+    }
+
+    _API_KEY = '3hwbSuqqT690uxjNYBktSQpa5ZrpYYR0Iofx7NcJHyA'
+
+    _ANVP_RE = r'<script[^>]+\bdata-anvp\s*=\s*(["\'])(?P<anvp>(?:(?!\1).)+)\1'
     _AUTH_KEY = b'\x31\xc2\x42\x84\x9e\x73\xa0\xce'
+
+    _TESTS = [{
+        # from https://www.boston25news.com/news/watch-humpback-whale-breaches-right-next-to-fishing-boat-near-nh/817484874
+        'url': 'anvato:8v9BEynrwx8EFLYpgfOWcG1qJqyXKlRM:4465496',
+        'info_dict': {
+            'id': '4465496',
+            'ext': 'mp4',
+            'title': 'VIDEO: Humpback whale breaches right next to NH boat',
+            'description': 'VIDEO: Humpback whale breaches right next to NH boat. Footage courtesy: Zach Fahey.',
+            'duration': 22,
+            'timestamp': 1534855680,
+            'upload_date': '20180821',
+            'uploader': 'ANV',
+        },
+        'params': {
+            'skip_download': True,
+        },
+    }, {
+        # from https://sanfrancisco.cbslocal.com/2016/06/17/source-oakland-cop-on-leave-for-having-girlfriend-help-with-police-reports/
+        'url': 'anvato:DVzl9QRzox3ZZsP9bNu5Li3X7obQOnqP:3417601',
+        'only_matching': True,
+    }]
 
     def __init__(self, *args, **kwargs):
         super(AnvatoIE, self).__init__(*args, **kwargs)
@@ -148,7 +193,8 @@ class AnvatoIE(InfoExtractor):
             'api': {
                 'anvrid': anvrid,
                 'anvstk': md5_text('%s|%s|%d|%s' % (
-                    access_key, anvrid, server_time, self._ANVACK_TABLE[access_key])),
+                    access_key, anvrid, server_time,
+                    self._ANVACK_TABLE.get(access_key, self._API_KEY))),
                 'anvts': server_time,
             },
         }
@@ -177,12 +223,16 @@ class AnvatoIE(InfoExtractor):
                 'tbr': tbr if tbr != 0 else None,
             }
 
-            if ext == 'm3u8' or media_format in ('m3u8', 'm3u8-variant'):
-                if tbr is not None:
-                    a_format.update({
-                        'format_id': '-'.join(filter(None, ['hls', compat_str(tbr)])),
-                        'ext': 'mp4',
-                    })
+            if media_format == 'm3u8' and tbr is not None:
+                a_format.update({
+                    'format_id': '-'.join(filter(None, ['hls', compat_str(tbr)])),
+                    'ext': 'mp4',
+                })
+            elif media_format == 'm3u8-variant' or ext == 'm3u8':
+                formats.extend(self._extract_m3u8_formats(
+                    video_url, video_id, 'mp4', entry_protocol='m3u8_native',
+                    m3u8_id='hls', fatal=False))
+                continue
             elif ext == 'mp3' or media_format == 'mp3':
                 a_format['vcodec'] = 'none'
             else:
@@ -217,9 +267,48 @@ class AnvatoIE(InfoExtractor):
             'subtitles': subtitles,
         }
 
+    @staticmethod
+    def _extract_urls(ie, webpage, video_id):
+        entries = []
+        for mobj in re.finditer(AnvatoIE._ANVP_RE, webpage):
+            anvplayer_data = ie._parse_json(
+                mobj.group('anvp'), video_id, transform_source=unescapeHTML,
+                fatal=False)
+            if not anvplayer_data:
+                continue
+            video = anvplayer_data.get('video')
+            if not isinstance(video, compat_str) or not video.isdigit():
+                continue
+            access_key = anvplayer_data.get('accessKey')
+            if not access_key:
+                mcp = anvplayer_data.get('mcp')
+                if mcp:
+                    access_key = AnvatoIE._MCP_TO_ACCESS_KEY_TABLE.get(
+                        mcp.lower())
+            if not access_key:
+                continue
+            entries.append(ie.url_result(
+                'anvato:%s:%s' % (access_key, video), ie=AnvatoIE.ie_key(),
+                video_id=video))
+        return entries
+
     def _extract_anvato_videos(self, webpage, video_id):
-        anvplayer_data = self._parse_json(self._html_search_regex(
-            r'<script[^>]+data-anvp=\'([^\']+)\'', webpage,
-            'Anvato player data'), video_id)
+        anvplayer_data = self._parse_json(
+            self._html_search_regex(
+                self._ANVP_RE, webpage, 'Anvato player data', group='anvp'),
+            video_id)
         return self._get_anvato_videos(
             anvplayer_data['accessKey'], anvplayer_data['video'])
+
+    def _real_extract(self, url):
+        url, smuggled_data = unsmuggle_url(url, {})
+        self._initialize_geo_bypass({
+            'countries': smuggled_data.get('geo_countries'),
+        })
+
+        mobj = re.match(self._VALID_URL, url)
+        access_key, video_id = mobj.group('access_key_or_mcp', 'id')
+        if access_key not in self._ANVACK_TABLE:
+            access_key = self._MCP_TO_ACCESS_KEY_TABLE.get(
+                access_key) or access_key
+        return self._get_anvato_videos(access_key, video_id)

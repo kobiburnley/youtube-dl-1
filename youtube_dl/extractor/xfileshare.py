@@ -10,7 +10,6 @@ from ..utils import (
     ExtractorError,
     int_or_none,
     NO_DEFAULT,
-    sanitized_Request,
     urlencode_postdata,
 )
 
@@ -24,12 +23,14 @@ class XFileShareIE(InfoExtractor):
         (r'powerwatch\.pw', 'PowerWatch'),
         (r'rapidvideo\.ws', 'Rapidvideo.ws'),
         (r'thevideobee\.to', 'TheVideoBee'),
-        (r'vidto\.me', 'Vidto'),
+        (r'vidto\.(?:me|se)', 'Vidto'),
         (r'streamin\.to', 'Streamin.To'),
         (r'xvidstage\.com', 'XVIDSTAGE'),
         (r'vidabc\.com', 'Vid ABC'),
         (r'vidbom\.com', 'VidBom'),
         (r'vidlo\.us', 'vidlo'),
+        (r'rapidvideo\.(?:cool|org)', 'RapidVideo.TV'),
+        (r'fastvideo\.me', 'FastVideo.me'),
     )
 
     IE_DESC = 'XFileShare based sites: %s' % ', '.join(list(zip(*_SITES))[1])
@@ -109,7 +110,25 @@ class XFileShareIE(InfoExtractor):
         'params': {
             'skip_download': True,
         },
+    }, {
+        'url': 'http://www.rapidvideo.cool/b667kprndr8w',
+        'only_matching': True,
+    }, {
+        'url': 'http://www.fastvideo.me/k8604r8nk8sn/FAST_FURIOUS_8_-_Trailer_italiano_ufficiale.mp4.html',
+        'only_matching': True,
+    }, {
+        'url': 'http://vidto.se/1tx1pf6t12cg.html',
+        'only_matching': True,
     }]
+
+    @staticmethod
+    def _extract_urls(webpage):
+        return [
+            mobj.group('url')
+            for mobj in re.finditer(
+                r'<iframe\b[^>]+\bsrc=(["\'])(?P<url>(?:https?:)?//(?:%s)/embed-[0-9a-zA-Z]+.*?)\1'
+                % '|'.join(site for site in list(zip(*XFileShareIE._SITES))[0]),
+                webpage)]
 
     def _real_extract(self, url):
         mobj = re.match(self._VALID_URL, url)
@@ -130,12 +149,12 @@ class XFileShareIE(InfoExtractor):
             if countdown:
                 self._sleep(countdown, video_id)
 
-            post = urlencode_postdata(fields)
-
-            req = sanitized_Request(url, post)
-            req.add_header('Content-type', 'application/x-www-form-urlencoded')
-
-            webpage = self._download_webpage(req, video_id, 'Downloading video page')
+            webpage = self._download_webpage(
+                url, video_id, 'Downloading video page',
+                data=urlencode_postdata(fields), headers={
+                    'Referer': url,
+                    'Content-type': 'application/x-www-form-urlencoded',
+                })
 
         title = (self._search_regex(
             (r'style="z-index: [0-9]+;">([^<]+)</span>',
@@ -150,7 +169,7 @@ class XFileShareIE(InfoExtractor):
         def extract_formats(default=NO_DEFAULT):
             urls = []
             for regex in (
-                    r'file\s*:\s*(["\'])(?P<url>http(?:(?!\1).)+\.(?:m3u8|mp4|flv)(?:(?!\1).)*)\1',
+                    r'(?:file|src)\s*:\s*(["\'])(?P<url>http(?:(?!\1).)+\.(?:m3u8|mp4|flv)(?:(?!\1).)*)\1',
                     r'file_link\s*=\s*(["\'])(?P<url>http(?:(?!\1).)+)\1',
                     r'addVariable\((\\?["\'])file\1\s*,\s*(\\?["\'])(?P<url>http(?:(?!\2).)+)\2\)',
                     r'<embed[^>]+src=(["\'])(?P<url>http(?:(?!\1).)+\.(?:m3u8|mp4|flv)(?:(?!\1).)*)\1'):

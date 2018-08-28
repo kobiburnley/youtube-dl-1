@@ -2,19 +2,28 @@
 from __future__ import unicode_literals
 
 import base64
+import binascii
 import json
 import os
+import random
 
 from .common import InfoExtractor
 from ..aes import aes_cbc_decrypt
-from ..compat import compat_ord
+from ..compat import (
+    compat_b64decode,
+    compat_ord,
+)
 from ..utils import (
     bytes_to_intlist,
+    bytes_to_long,
     ExtractorError,
     float_or_none,
     intlist_to_bytes,
+    long_to_bytes,
+    pkcs1pad,
     srt_subtitles_timecode,
     strip_or_none,
+    urljoin,
 )
 
 
@@ -31,25 +40,27 @@ class ADNIE(InfoExtractor):
             'description': 'md5:2f7b5aa76edbc1a7a92cedcda8a528d5',
         }
     }
+    _BASE_URL = 'http://animedigitalnetwork.fr'
+    _RSA_KEY = (0xc35ae1e4356b65a73b551493da94b8cb443491c0aa092a357a5aee57ffc14dda85326f42d716e539a34542a0d3f363adf16c5ec222d713d5997194030ee2e4f0d1fb328c01a81cf6868c090d50de8e169c6b13d1675b9eeed1cbc51e1fffca9b38af07f37abd790924cd3bee59d0257cfda4fe5f3f0534877e21ce5821447d1b, 65537)
 
     def _get_subtitles(self, sub_path, video_id):
         if not sub_path:
             return None
 
         enc_subtitles = self._download_webpage(
-            'http://animedigitalnetwork.fr/' + sub_path,
+            urljoin(self._BASE_URL, sub_path),
             video_id, fatal=False)
         if not enc_subtitles:
             return None
 
         # http://animedigitalnetwork.fr/components/com_vodvideo/videojs/adn-vjs.min.js
         dec_subtitles = intlist_to_bytes(aes_cbc_decrypt(
-            bytes_to_intlist(base64.b64decode(enc_subtitles[24:])),
-            bytes_to_intlist(b'\nd\xaf\xd2J\xd0\xfc\xe1\xfc\xdf\xb61\xe8\xe1\xf0\xcc'),
-            bytes_to_intlist(base64.b64decode(enc_subtitles[:24]))
+            bytes_to_intlist(compat_b64decode(enc_subtitles[24:])),
+            bytes_to_intlist(binascii.unhexlify(self._K + '9032ad7083106400')),
+            bytes_to_intlist(compat_b64decode(enc_subtitles[:24]))
         ))
         subtitles_json = self._parse_json(
-            dec_subtitles[:-compat_ord(dec_subtitles[-1])],
+            dec_subtitles[:-compat_ord(dec_subtitles[-1])].decode(),
             None, fatal=False)
         if not subtitles_json:
             return None
@@ -101,11 +112,36 @@ class ADNIE(InfoExtractor):
 
         options = player_config.get('options') or {}
         metas = options.get('metas') or {}
-        title = metas.get('title') or video_info['title']
         links = player_config.get('links') or {}
+        sub_path = player_config.get('subtitles')
+        error = None
+        if not links:
+            links_url = player_config.get('linksurl') or options['videoUrl']
+            token = options['token']
+            self._K = ''.join([random.choice('0123456789abcdef') for _ in range(16)])
+            message = bytes_to_intlist(json.dumps({
+                'k': self._K,
+                'e': 60,
+                't': token,
+            }))
+            padded_message = intlist_to_bytes(pkcs1pad(message, 128))
+            n, e = self._RSA_KEY
+            encrypted_message = long_to_bytes(pow(bytes_to_long(padded_message), e, n))
+            authorization = base64.b64encode(encrypted_message).decode()
+            links_data = self._download_json(
+                urljoin(self._BASE_URL, links_url), video_id, headers={
+                    'Authorization': 'Bearer ' + authorization,
+                })
+            links = links_data.get('links') or {}
+            metas = metas or links_data.get('meta') or {}
+            sub_path = (sub_path or links_data.get('subtitles')) + '&token=' + token
+            error = links_data.get('error')
+        title = metas.get('title') or video_info['title']
 
         formats = []
         for format_id, qualities in links.items():
+            if not isinstance(qualities, dict):
+                continue
             for load_balancer_url in qualities.values():
                 load_balancer_data = self._download_json(
                     load_balancer_url, video_id, fatal=False) or {}
@@ -119,7 +155,8 @@ class ADNIE(InfoExtractor):
                     for f in m3u8_formats:
                         f['language'] = 'fr'
                 formats.extend(m3u8_formats)
-        error = options.get('error')
+        if not error:
+            error = options.get('error')
         if not formats and error:
             raise ExtractorError('%s said: %s' % (self.IE_NAME, error), expected=True)
         self._sort_formats(formats)
@@ -130,7 +167,7 @@ class ADNIE(InfoExtractor):
             'description': strip_or_none(metas.get('summary') or video_info.get('resume')),
             'thumbnail': video_info.get('image'),
             'formats': formats,
-            'subtitles': self.extract_subtitles(player_config.get('subtitles'), video_id),
+            'subtitles': self.extract_subtitles(sub_path, video_id),
             'episode': metas.get('subtitle') or video_info.get('videoTitle'),
             'series': video_info.get('playlistTitle'),
         }
