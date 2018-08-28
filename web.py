@@ -5,8 +5,6 @@ import youtube_dl
 import urllib2
 import json
 
-from youtube_service import youtube_search
-
 def youtube_dl_extract_info(video_id):
 
     full_video_url = "%s%s" % ("https://www.youtube.com/watch?v=", video_id)
