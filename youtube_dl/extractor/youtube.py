@@ -1262,7 +1262,7 @@ class YoutubeIE(YoutubeBaseInfoExtractor):
         cache_res = res(test_string)
         cache_spec = [ord(c) for c in cache_res]
 
-        # self._downloader.cache.store('youtube-sigfuncs', func_id, cache_spec)
+        self._downloader.cache.store('youtube-sigfuncs', func_id, cache_spec)
         return res
 
     def _print_sig_code(self, func, example_sig):
