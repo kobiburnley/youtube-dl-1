@@ -500,6 +500,12 @@ class YoutubeIE(YoutubeBaseInfoExtractor):
 
         # RTMP (unnamed)
         '_rtmp': {'protocol': 'rtmp'},
+
+        # av01 video only formats sometimes served with "unknown" codecs
+        '394': {'acodec': 'none', 'vcodec': 'av01.0.05M.08'},
+        '395': {'acodec': 'none', 'vcodec': 'av01.0.05M.08'},
+        '396': {'acodec': 'none', 'vcodec': 'av01.0.05M.08'},
+        '397': {'acodec': 'none', 'vcodec': 'av01.0.05M.08'},
     }
     _SUBTITLE_FORMATS = ('srv1', 'srv2', 'srv3', 'ttml', 'vtt')
 
@@ -1575,8 +1581,15 @@ class YoutubeIE(YoutubeBaseInfoExtractor):
         return video_id
 
     def _extract_annotations(self, video_id):
-        url = 'https://www.youtube.com/annotations_invideo?features=1&legacy=1&video_id=%s' % video_id
-        return self._download_webpage(url, video_id, note='Searching for annotations.', errnote='Unable to download video annotations.')
+        return self._download_webpage(
+            'https://www.youtube.com/annotations_invideo', video_id,
+            note='Downloading annotations',
+            errnote='Unable to download video annotations', fatal=False,
+            query={
+                'features': 1,
+                'legacy': 1,
+                'video_id': video_id,
+            })
 
     @staticmethod
     def _extract_chapters(description, duration):
@@ -2224,6 +2237,10 @@ class YoutubeIE(YoutubeBaseInfoExtractor):
                 r'<[^>]+class=["\']watch-view-count[^>]+>\s*([\d,\s]+)', video_webpage,
                 'view count', default=None))
 
+        average_rating = (
+            float_or_none(video_details.get('averageRating'))
+            or try_get(video_info, lambda x: float_or_none(x['avg_rating'][0])))
+
         # subtitles
         video_subtitles = self.extract_subtitles(video_id, video_webpage)
         automatic_captions = self.extract_automatic_captions(video_id, video_webpage)
@@ -2353,7 +2370,7 @@ class YoutubeIE(YoutubeBaseInfoExtractor):
             'view_count': view_count,
             'like_count': like_count,
             'dislike_count': dislike_count,
-            'average_rating': float_or_none(video_info.get('avg_rating', [None])[0]),
+            'average_rating': average_rating,
             'formats': formats,
             'is_live': is_live,
             'start_time': start_time,
