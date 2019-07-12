@@ -58,16 +58,8 @@
  - **ARD:mediathek**
  - **ARDBetaMediathek**
  - **Arkena**
- - **arte.tv**
  - **arte.tv:+7**
- - **arte.tv:cinema**
- - **arte.tv:concert**
- - **arte.tv:creative**
- - **arte.tv:ddc**
  - **arte.tv:embed**
- - **arte.tv:future**
- - **arte.tv:info**
- - **arte.tv:magazine**
  - **arte.tv:playlist**
  - **AsianCrush**
  - **AsianCrushPlaylist**
@@ -313,9 +305,7 @@
  - **FrontendMastersCourse**
  - **FrontendMastersLesson**
  - **Funimation**
- - **FunkChannel**
- - **FunkMix**
- - **FunnyOrDie**
+ - **Funk**
  - **Fusion**
  - **Fux**
  - **FXNetworks**
@@ -581,7 +571,6 @@
  - **NextTV**: 壹電視
  - **Nexx**
  - **NexxEmbed**
- - **nfb**: National Film Board of Canada
  - **nfl.com**
  - **NhkVod**
  - **nhl.com**
@@ -692,8 +681,9 @@
  - **PornerBros**
  - **PornHd**
  - **PornHub**: PornHub and Thumbzilla
- - **PornHubPlaylist**
- - **PornHubUserVideos**
+ - **PornHubPagedVideoList**
+ - **PornHubUser**
+ - **PornHubUserVideosUpload**
  - **Pornotube**
  - **PornoVoisines**
  - **PornoXO**
@@ -896,7 +886,6 @@
  - **TF1**
  - **TFO**
  - **TheIntercept**
- - **theoperaplatform**
  - **ThePlatform**
  - **ThePlatformFeed**
  - **TheScene**

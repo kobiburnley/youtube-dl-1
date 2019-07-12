@@ -58,17 +58,8 @@ from .ard import (
     ARDMediathekIE,
 )
 from .arte import (
-    ArteTvIE,
     ArteTVPlus7IE,
-    ArteTVCreativeIE,
-    ArteTVConcertIE,
-    ArteTVInfoIE,
-    ArteTVFutureIE,
-    ArteTVCinemaIE,
-    ArteTVDDCIE,
-    ArteTVMagazineIE,
     ArteTVEmbedIE,
-    TheOperaPlatformIE,
     ArteTVPlaylistIE,
 )
 from .asiancrush import (
@@ -404,11 +395,7 @@ from .frontendmasters import (
     FrontendMastersCourseIE
 )
 from .funimation import FunimationIE
-from .funk import (
-    FunkMixIE,
-    FunkChannelIE,
-)
-from .funnyordie import FunnyOrDieIE
+from .funk import FunkIE
 from .fusion import FusionIE
 from .fxnetworks import FXNetworksIE
 from .gaia import GaiaIE
@@ -745,7 +732,6 @@ from .nexx import (
     NexxIE,
     NexxEmbedIE,
 )
-from .nfb import NFBIE
 from .nfl import NFLIE
 from .nhk import NhkVodIE
 from .nhl import NHLIE
@@ -892,8 +878,9 @@ from .porncom import PornComIE
 from .pornhd import PornHdIE
 from .pornhub import (
     PornHubIE,
-    PornHubPlaylistIE,
-    PornHubUserVideosIE,
+    PornHubUserIE,
+    PornHubPagedVideoListIE,
+    PornHubUserVideosUploadIE,
 )
 from .pornotube import PornotubeIE
 from .pornovoisines import PornoVoisinesIE
