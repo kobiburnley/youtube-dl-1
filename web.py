@@ -2,7 +2,6 @@ from wsgiref.simple_server import make_server
 import os
 import urllib.parse
 import youtube_dl
-import urllib2
 import json
 
 def youtube_dl_extract_info(video_id):
@@ -28,27 +27,6 @@ def youtube_dl_extract(video_id, formats_ids):
         except StopIteration:
             url = info['formats'][0]['url']
     return url
-
-
-def stream_media(media_url, start_response):
-    req = urllib2.Request(media_url, headers={'User-Agent': "Magic Browser"})
-    u = urllib2.urlopen(req)
-    meta = u.info()
-    file_size = int(meta.getheaders("Content-Length")[0])
-    file_size_dl = 0
-    block_sz = 8192
-    mp3file = urllib2.urlopen(media_url)
-
-    headers = [('Content-type', 'audio/mp4'), ('Content-length', str(file_size)), ('Accept-Ranges', 'bytes')]
-    write = start_response('200 OK', headers)
-
-    while True:
-        chuck = mp3file.read(block_sz)
-        if not chuck:
-            print ("break %s" % file_size_dl)
-            break
-        yield chuck
-
 
 def hello_world_app(environ, start_response):
     params = urlparse.parse_qs(environ['QUERY_STRING'])
