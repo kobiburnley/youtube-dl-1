@@ -29,7 +29,7 @@ def youtube_dl_extract(video_id, formats_ids):
     return url
 
 def hello_world_app(environ, start_response):
-    params = urlparse.parse_qs(environ['QUERY_STRING'])
+    params = parse_qs(environ['QUERY_STRING'])
 
     video_id = params.get('id', [False])[0] or params.get('yb', [False])[0]
     sig = params.get('sig', [False])[0]
