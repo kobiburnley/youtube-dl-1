@@ -1,6 +1,6 @@
 from wsgiref.simple_server import make_server
 import os
-from urllib.parse import urlparse
+from urllib.parse import parse_qs
 import youtube_dl
 import json
 
