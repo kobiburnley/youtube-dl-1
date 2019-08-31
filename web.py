@@ -45,7 +45,7 @@ def stream_media(media_url, start_response):
     while True:
         chuck = mp3file.read(block_sz)
         if not chuck:
-            print "break %s" % file_size_dl
+            print ("break %s" % file_size_dl)
             break
         yield chuck
 
@@ -56,7 +56,7 @@ def hello_world_app(environ, start_response):
     video_id = params.get('id', [False])[0] or params.get('yb', [False])[0]
     sig = params.get('sig', [False])[0]
     url = params.get('url', [False])[0]
-    print "playerUrl: %s, sig: %s, videoId: %s" % (url, sig, video_id)
+    print ("playerUrl: %s, sig: %s, videoId: %s" % (url, sig, video_id))
 
     if url.find("ytimg.com") == -1:
         url = "//s.ytimg.com%s" % url
@@ -74,12 +74,12 @@ def hello_world_app(environ, start_response):
             start_response('200 OK', headers)
             return [wo.encode("utf-8")]
     except Exception as e:
-        print e
+        print (e)
         start_response('500 INTERNAL SERVER ERROR', headers)
         return ['An error occurred.']
 
 
 port = os.environ.get("PORT", "5000")
 httpd = make_server('', int(port), hello_world_app)
-print "Serving HTTP on port " + port + "..."
+print ("Serving HTTP on port " + port + "...")
 httpd.serve_forever()
