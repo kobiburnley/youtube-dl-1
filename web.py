@@ -36,9 +36,6 @@ def hello_world_app(environ, start_response):
     url = params.get('url', [False])[0]
     print ("playerUrl: %s, sig: %s, videoId: %s" % (url, sig, video_id))
 
-    if url.find("ytimg.com") == -1:
-        url = "//s.ytimg.com%s" % url
-
     headers = [('Content-type', 'text/html')]
 
     if not sig or not url:
